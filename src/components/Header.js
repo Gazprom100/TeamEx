@@ -1,94 +1,128 @@
 import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
-import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeftIcon } from './Icons';
+
+// Иконки
+import { IoHomeOutline, IoSwapHorizontalOutline, IoMenuOutline, IoChevronBack } from 'react-icons/io5';
 
 const HeaderContainer = styled.header`
   display: flex;
-  flex-direction: column;
-  margin-bottom: 20px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+`;
+
+const Logo = styled(Link)`
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0;
+    background: linear-gradient(90deg, #00F0FF, #5773FF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+`;
+
+const Navigation = styled.nav`
+  display: flex;
+  gap: 15px;
+`;
+
+const NavItem = styled(motion.div)`
+  cursor: pointer;
+  font-size: 24px;
+  color: ${props => props.active ? '#5773FF' : 'currentColor'};
 `;
 
 const BackButton = styled(motion.button)`
   background: none;
   border: none;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  padding: 8px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-size: 14px;
-  border-radius: var(--border-radius);
-  margin-bottom: 10px;
-  align-self: flex-start;
-  
-  &:hover {
-    color: var(--text-primary);
-    background: rgba(255, 255, 255, 0.05);
-  }
-  
-  svg {
-    margin-right: 6px;
-  }
-`;
-
-const Title = styled(motion.h1)`
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0 0 5px;
-`;
-
-const Subtitle = styled(motion.p)`
   font-size: 16px;
-  color: var(--text-secondary);
-  margin: 0;
-  font-weight: 400;
+  color: #5773FF;
+  padding: 0;
 `;
 
-export const Header = ({ title, subtitle, backTo }) => {
-  const navigate = useNavigate();
+const UserInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
   
-  const handleBack = () => {
-    if (backTo) {
-      navigate(backTo);
-    } else {
-      navigate(-1);
+  img {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+  }
+`;
+
+function Header({ telegramUser }) {
+  const location = useLocation();
+  const isHome = location.pathname === '/';
+  const tg = window.Telegram?.WebApp;
+  
+  // Обработчик возврата в Telegram
+  const handleBackClick = () => {
+    if (tg) {
+      tg.close();
     }
   };
-  
+
   return (
     <HeaderContainer>
-      {backTo !== undefined && (
+      {isHome ? (
+        <Logo to="/">
+          <h1>TeamEx</h1>
+        </Logo>
+      ) : (
         <BackButton 
-          onClick={handleBack}
+          onClick={handleBackClick}
           whileTap={{ scale: 0.95 }}
         >
-          <ArrowLeftIcon size="16px" />
-          Назад
+          <IoChevronBack /> Назад
         </BackButton>
       )}
       
-      <Title
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        {title}
-      </Title>
-      
-      {subtitle && (
-        <Subtitle
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-        >
-          {subtitle}
-        </Subtitle>
+      {telegramUser && (
+        <UserInfo>
+          {telegramUser.photo_url && <img src={telegramUser.photo_url} alt={telegramUser.first_name} />}
+          <span>{telegramUser.first_name}</span>
+        </UserInfo>
       )}
+      
+      <Navigation>
+        <NavItem
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          active={location.pathname === '/'}
+        >
+          <Link to="/">
+            <IoHomeOutline />
+          </Link>
+        </NavItem>
+        <NavItem
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          active={location.pathname === '/exchange'}
+        >
+          <Link to="/exchange">
+            <IoSwapHorizontalOutline />
+          </Link>
+        </NavItem>
+      </Navigation>
     </HeaderContainer>
   );
-};
+}
 
 export default Header; 

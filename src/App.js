@@ -1,40 +1,80 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
-import GlobalStyles from './styles/GlobalStyles';
+import React, { useEffect, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import styled from 'styled-components';
+import { setupTelegramWebApp } from './services/api';
 
-// Import pages
+// Компоненты
 import Home from './pages/Home';
-import About from './pages/About';
 import Exchange from './pages/Exchange';
-import AmlCheck from './pages/AmlCheck';
-import Referral from './pages/Referral';
-import Requests from './pages/Requests';
-import Support from './pages/Support';
-import Rates from './pages/Rates';
-import Rules from './pages/Rules';
-import Success from './pages/Success';
+import Header from './components/Header';
+import Footer from './components/Footer';
+
+// Стилизованные компоненты
+const AppContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0E131A 0%, #151E2A 100%);
+  color: #ffffff;
+  font-family: 'Inter', sans-serif;
+  
+  /* Адаптация под Telegram темы */
+  [data-theme="dark"] & {
+    background: linear-gradient(135deg, #0E131A 0%, #151E2A 100%);
+  }
+  
+  [data-theme="light"] & {
+    background: linear-gradient(135deg, #F5F7FA 0%, #E9EDF5 100%);
+    color: #121212;
+  }
+`;
+
+const Content = styled.main`
+  flex: 1;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+`;
 
 function App() {
+  const [telegramUser, setTelegramUser] = useState(null);
+  const [telegramTheme, setTelegramTheme] = useState('dark');
+  
+  useEffect(() => {
+    // Инициализация Telegram WebApp
+    const tg = setupTelegramWebApp();
+    
+    if (tg) {
+      // Сохраняем информацию о пользователе если есть
+      if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+        setTelegramUser(tg.initDataUnsafe.user);
+      }
+      
+      // Устанавливаем тему
+      setTelegramTheme(tg.colorScheme || 'dark');
+      
+      // Добавляем слушатель изменения темы
+      tg.onEvent('themeChanged', () => {
+        setTelegramTheme(tg.colorScheme);
+      });
+    }
+  }, []);
+
   return (
-    <Router>
-      <GlobalStyles />
-      <AnimatePresence mode="wait">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/exchange" element={<Exchange />} />
-          <Route path="/aml-check" element={<AmlCheck />} />
-          <Route path="/referral" element={<Referral />} />
-          <Route path="/requests" element={<Requests />} />
-          <Route path="/support" element={<Support />} />
-          <Route path="/rates" element={<Rates />} />
-          <Route path="/rules" element={<Rules />} />
-          <Route path="/success" element={<Success />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AnimatePresence>
-    </Router>
+    <AppContainer>
+      <Router>
+        <Header telegramUser={telegramUser} />
+        <Content>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/exchange" element={<Exchange telegramUser={telegramUser} />} />
+            {/* Добавьте здесь новые маршруты */}
+          </Routes>
+        </Content>
+        <Footer />
+      </Router>
+    </AppContainer>
   );
 }
 

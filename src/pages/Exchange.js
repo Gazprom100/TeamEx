@@ -1,127 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Header } from '../components/Header';
-import { Input } from '../components/Input';
-import { Button, ButtonVariants, ButtonSizes } from '../components/Button';
-import { Card, CardTypes } from '../components/Card';
-import { Layout } from '../components/Layout';
-import ParticlesBackground from '../components/ParticlesBackground';
-import { ExchangeIcon, ChartIcon, WalletIcon, SecurityIcon } from '../components/Icons';
+import styled from 'styled-components';
+import { motion } from 'framer-motion';
+import Layout from '../components/Layout';
+import Button from '../components/Button';
+import Input from '../components/Input';
+import Card from '../components/Card';
+import PriceChart from '../components/PriceChart';
+import { ArrowRight } from '../components/Icons';
+import api from '../services/api';
+import Header from '../components/Header';
+import axios from 'axios';
 
-const PageContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  position: relative;
+const ExchangeContainer = styled(motion.div)`
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
 `;
 
-const ContentGrid = styled.div`
-  display: grid;
-  gap: 20px;
+const StepsContainer = styled.div`
+  display: flex;
+  justify-content: space-between;
   margin-bottom: 30px;
-`;
-
-const ExchangeCard = styled(Card)`
-  margin-bottom: 20px;
-`;
-
-const FormSection = styled.div`
-  margin-bottom: 20px;
-`;
-
-const FormLabel = styled.label`
-  display: block;
-  margin-bottom: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-secondary);
-`;
-
-const InputGroup = styled.div`
   position: relative;
-  margin-bottom: 20px;
-`;
-
-const CurrencyIndicator = styled.div`
-  position: absolute;
-  right: 15px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  background: var(--dark-input);
-  padding: 5px 10px;
-  border-radius: 6px;
-  z-index: 2;
-`;
-
-const RateDisplay = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px;
-  margin: 20px 0;
-  border-radius: var(--border-radius);
-  background: rgba(32, 41, 58, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-`;
-
-const RateTitle = styled.div`
-  font-size: 14px;
-  color: var(--text-secondary);
-`;
-
-const RateValue = styled.div`
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-`;
-
-const RequisitesContainer = styled.div`
-  margin-top: 20px;
-`;
-
-const InfoMessage = styled(motion.div)`
-  padding: 15px;
-  border-radius: var(--border-radius);
-  background: rgba(var(--info-rgb), 0.1);
-  border: 1px solid rgba(var(--info-rgb), 0.2);
-  margin: 20px 0;
-  display: flex;
-  align-items: flex-start;
-  
-  svg {
-    margin-right: 10px;
-    flex-shrink: 0;
-    color: var(--info);
-  }
-`;
-
-const InfoText = styled.div`
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--text-primary);
-`;
-
-const StepIndicator = styled.div`
-  display: flex;
-  justify-content: space-between;
-  margin: 30px 0;
-  position: relative;
-  
-  &::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 10px;
-    height: 2px;
-    background: var(--dark-border);
-    z-index: 0;
-  }
+  max-width: 600px;
+  margin: 0 auto 40px;
 `;
 
 const Step = styled.div`
@@ -129,114 +33,478 @@ const Step = styled.div`
   flex-direction: column;
   align-items: center;
   position: relative;
-  z-index: 1;
+  z-index: 2;
+  flex: 1;
 `;
 
-const StepDot = styled.div`
-  width: 22px;
-  height: 22px;
+const StepNumber = styled.div`
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  background: ${props => props.active ? 'var(--accent-primary)' : props.completed ? 'var(--success)' : 'var(--dark-border)'};
-  color: var(--dark-background);
+  background-color: ${props => props.active ? 'var(--accent-primary)' : 'var(--bg-card)'};
+  color: ${props => props.active ? 'white' : 'var(--text-secondary)'};
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
   font-weight: 600;
   margin-bottom: 8px;
   transition: all 0.3s ease;
-  
-  ${props => props.completed && `
-    &::after {
-      content: '✓';
-      font-size: 12px;
-    }
-  `}
+  box-shadow: ${props => props.active ? '0 0 15px rgba(0, 120, 255, 0.5)' : 'none'};
 `;
 
-const StepLabel = styled.div`
+const StepTitle = styled.div`
+  font-size: 14px;
+  color: ${props => props.active ? 'var(--text-primary)' : 'var(--text-secondary)'};
+  font-weight: ${props => props.active ? '600' : '400'};
+  transition: all 0.3s ease;
+`;
+
+const ProgressLine = styled.div`
+  position: absolute;
+  top: 20px;
+  left: 70px;
+  right: 70px;
+  height: 3px;
+  background-color: var(--bg-card);
+  z-index: 1;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: ${props => {
+      if (props.step === 1) return '0%';
+      if (props.step === 2) return '50%';
+      return '100%';
+    }};
+    background-color: var(--accent-primary);
+    transition: width 0.5s ease;
+  }
+`;
+
+const FormContainer = styled(Card)`
+  max-width: 600px;
+  margin: 0 auto 30px;
+  padding: 30px;
+`;
+
+const FormTitle = styled.h2`
+  margin: 0 0 20px;
+  font-size: 22px;
+  color: var(--text-primary);
+`;
+
+const FormGroup = styled.div`
+  margin-bottom: 24px;
+`;
+
+const InputWithPrice = styled.div`
+  position: relative;
+`;
+
+const CurrencyTag = styled.div`
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--accent-primary);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+`;
+
+const PriceInfo = styled.div`
+  display: flex;
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  justify-content: space-between;
+`;
+
+const RateInfo = styled.div`
+  margin-top: 16px;
+  padding: 12px;
+  background: var(--bg-element);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  display: flex;
+  justify-content: space-between;
+`;
+
+const ChartContainer = styled.div`
+  margin: 40px auto;
+  max-width: 900px;
+`;
+
+const ButtonContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+`;
+
+const ErrorMessage = styled.div`
+  color: var(--danger);
+  font-size: 14px;
+  margin-top: 5px;
+  font-weight: 500;
+`;
+
+const SuccessMessage = styled.div`
+  color: var(--success);
+  font-size: 14px;
+  margin-top: 5px;
+  font-weight: 500;
+`;
+
+const SummaryItem = styled.div`
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-size: 15px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const SummaryLabel = styled.div`
+  color: var(--text-secondary);
+`;
+
+const SummaryValue = styled.div`
+  color: var(--text-primary);
+  font-weight: 600;
+`;
+
+const TotalRow = styled(SummaryItem)`
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+  font-size: 16px;
+`;
+
+const Container = styled.div`
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 0 20px;
+  background: linear-gradient(135deg, #101318, #181e29);
+  color: white;
+`;
+
+const Content = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 0;
+  max-width: 500px;
+  margin: 0 auto;
+  width: 100%;
+`;
+
+const RateCard = styled(Card)`
+  display: flex;
+  justify-content: space-around;
+  padding: 16px;
+`;
+
+const RateColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+`;
+
+const RateLabel = styled.div`
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 8px;
+`;
+
+const RateValue = styled.div`
+  font-size: 20px;
+  font-weight: 700;
+  color: ${props => props.type === 'buy' ? '#00f0ff' : '#5773ff'};
+`;
+
+const ExchangeForm = styled.form`
+  width: 100%;
+`;
+
+const Label = styled.label`
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+`;
+
+const Select = styled.select`
+  width: 100%;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: white;
+  font-size: 16px;
+  
+  &:focus {
+    outline: none;
+    border-color: #5773ff;
+  }
+`;
+
+const RadioGroup = styled.div`
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+`;
+
+const RadioLabel = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 10px 16px;
+  background: ${props => props.checked ? 'rgba(87, 115, 255, 0.2)' : 'rgba(255, 255, 255, 0.05)'};
+  border-radius: 8px;
+  border: 1px solid ${props => props.checked ? '#5773ff' : 'transparent'};
+  transition: all 0.2s;
+  
+  &:hover {
+    background: rgba(87, 115, 255, 0.1);
+  }
+`;
+
+const RadioInput = styled.input`
+  display: none;
+`;
+
+const RadioText = styled.span`
+  font-size: 14px;
+  font-weight: ${props => props.checked ? '600' : '400'};
+`;
+
+const Footnote = styled.p`
+  text-align: center;
   font-size: 12px;
-  color: ${props => props.active ? 'var(--text-primary)' : 'var(--text-tertiary)'};
-  font-weight: ${props => props.active ? '500' : '400'};
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 24px;
+`;
+
+const CalculationRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 14px;
 `;
 
 const Exchange = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
-    amount: '',
-    email: '',
-    card: '',
-    fullName: '',
-  });
+  const [amount, setAmount] = useState('');
+  const [email, setEmail] = useState('');
+  const [cardNumber, setCardNumber] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [receiveAmount, setReceiveAmount] = useState('');
   const [errors, setErrors] = useState({});
-  const [currentRate, setCurrentRate] = useState(97.25);
-  const [receiveAmount, setReceiveAmount] = useState('0.00');
-  
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
-    
-    // Clear error when user types
-    if (errors[name]) {
-      setErrors({
-        ...errors,
-        [name]: null
-      });
+  const [loading, setLoading] = useState(false);
+  const [rates, setRates] = useState({
+    buy: 97.5,
+    sell: 95.5
+  });
+  const [exchangeType, setExchangeType] = useState('buy'); // 'buy' or 'sell'
+  const [calculatedAmount, setCalculatedAmount] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState('tinkoff');
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+  const [telegramWebApp, setTelegramWebApp] = useState(null);
+  const [user, setUser] = useState(null);
+
+  // Инициализируем Telegram WebApp
+  useEffect(() => {
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.expand(); // Расширяем WebApp на весь экран
+      tg.ready(); // Сообщаем Telegram, что WebApp готов
+
+      setTelegramWebApp(tg);
+      
+      // Получаем информацию о пользователе
+      if (tg.initDataUnsafe?.user) {
+        setUser(tg.initDataUnsafe.user);
+      }
     }
-    
-    // Calculate receive amount if amount changes
-    if (name === 'amount') {
-      const numValue = parseFloat(value) || 0;
-      setReceiveAmount((numValue * currentRate).toFixed(2));
+  }, []);
+
+  // Получаем курсы обмена
+  useEffect(() => {
+    fetchRates();
+    // Обновляем курсы каждые 30 секунд
+    const interval = setInterval(fetchRates, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Пересчитываем сумму при изменении входных данных
+  useEffect(() => {
+    if (amount && !isNaN(parseFloat(amount))) {
+      if (exchangeType === 'buy') {
+        // Если покупаем USDT: сумма в рублях -> получаем USDT
+        setCalculatedAmount((parseFloat(amount) / rates.buy).toFixed(2));
+      } else {
+        // Если продаем USDT: сумма в USDT -> получаем рубли
+        setCalculatedAmount((parseFloat(amount) * rates.sell).toFixed(2));
+      }
+    } else {
+      setCalculatedAmount(0);
+    }
+  }, [amount, rates, exchangeType]);
+
+  const fetchRates = async () => {
+    try {
+      // В реальном проекте здесь будет запрос к бэкенду
+      // const response = await axios.get('/api/rates');
+      // setRates(response.data);
+      
+      // Временное решение с фиксированными курсами для демонстрации
+      setRates({
+        buy: 97.5,
+        sell: 95.5
+      });
+    } catch (error) {
+      console.error('Error fetching rates:', error);
     }
   };
-  
-  const validate = () => {
-    const newErrors = {};
-    
+
+  const handleNext = () => {
     if (step === 1) {
-      if (!formData.amount || parseFloat(formData.amount) <= 0) {
-        newErrors.amount = 'Пожалуйста, введите сумму';
-      }
+      const newErrors = {};
       
-      if (!formData.email) {
-        newErrors.email = 'Пожалуйста, введите email';
-      } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-        newErrors.email = 'Пожалуйста, введите корректный email';
+      if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+        newErrors.amount = 'Введите корректную сумму';
+      }
+
+      if (Object.keys(newErrors).length === 0) {
+        setErrors({});
+        setStep(2);
+      } else {
+        setErrors(newErrors);
       }
     } else if (step === 2) {
-      if (!formData.card) {
-        newErrors.card = 'Пожалуйста, введите номер карты';
-      } else if (!/^\d{16,19}$/.test(formData.card.replace(/\s/g, ''))) {
-        newErrors.card = 'Неверный формат карты';
+      const newErrors = {};
+      
+      if (!email || !email.includes('@')) {
+        newErrors.email = 'Введите корректный Email';
       }
       
-      if (!formData.fullName) {
-        newErrors.fullName = 'Пожалуйста, введите ФИО';
+      if (!cardNumber || cardNumber.replace(/\s/g, '').length !== 16) {
+        newErrors.cardNumber = 'Введите 16 цифр номера карты';
+      }
+      
+      if (!fullName || fullName.trim().split(' ').length < 2) {
+        newErrors.fullName = 'Введите имя и фамилию';
+      }
+
+      if (Object.keys(newErrors).length === 0) {
+        setErrors({});
+        handleSubmit();
+      } else {
+        setErrors(newErrors);
       }
     }
+  };
+
+  const handleBack = () => {
+    if (step > 1) {
+      setStep(step - 1);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-  
-  const handleNextStep = () => {
-    if (validate()) {
-      setStep(step + 1);
+    // Проверяем, что все поля заполнены
+    if (!amount || parseFloat(amount) <= 0) {
+      setError('Пожалуйста, введите корректную сумму');
+      return;
+    }
+    
+    if (exchangeType === 'buy' && (!cardNumber || cardNumber.replace(/\s/g, '').length !== 16)) {
+      setError('Пожалуйста, введите корректный номер карты');
+      return;
+    }
+    
+    if (!paymentMethod) {
+      setError('Пожалуйста, выберите способ оплаты');
+      return;
+    }
+    
+    setLoading(true);
+    setError('');
+    
+    try {
+      // Данные для отправки
+      const orderData = {
+        user_id: user?.id,
+        username: user?.username,
+        type: exchangeType,
+        amount: parseFloat(amount),
+        total: parseFloat(calculatedAmount),
+        payment_method: paymentMethod,
+        card_number: exchangeType === 'buy' ? cardNumber.replace(/\s/g, '') : undefined
+      };
+      
+      // В реальном проекте здесь будет запрос к бэкенду
+      // const response = await axios.post('/api/orders', orderData);
+      
+      // Временное решение для демонстрации
+      console.log('Order data:', orderData);
+      
+      // Отправляем данные в Telegram
+      if (telegramWebApp) {
+        telegramWebApp.sendData(JSON.stringify(orderData));
+        
+        // Показываем сообщение об успешной отправке
+        telegramWebApp.showPopup({
+          title: 'Заявка отправлена',
+          message: `Ваша заявка на ${exchangeType === 'buy' ? 'покупку' : 'продажу'} USDT успешно отправлена. Ожидайте сообщения от оператора.`,
+          buttons: [{ type: 'ok' }]
+        });
+        
+        // Закрываем WebApp после успешной отправки
+        setTimeout(() => {
+          telegramWebApp.close();
+        }, 3000);
+      } else {
+        // Если WebApp не доступен, просто показываем сообщение об успехе
+        setSuccess(true);
+        setTimeout(() => {
+          setSuccess(false);
+          setAmount('');
+          setCardNumber('');
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Error submitting order:', error);
+      setError('Произошла ошибка при отправке заявки. Пожалуйста, попробуйте позже.');
+    } finally {
+      setLoading(false);
     }
   };
-  
-  const handleSubmit = () => {
-    if (validate()) {
-      // Submit the exchange request
-      navigate('/success');
-    }
+
+  const handleToggleExchangeType = () => {
+    setExchangeType(exchangeType === 'buy' ? 'sell' : 'buy');
+    setAmount('');
+    setReceiveAmount('');
   };
   
+  // Форматирование номера карты
   const formatCardNumber = (value) => {
     const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
     const matches = v.match(/\d{4,16}/g);
@@ -253,281 +521,127 @@ const Exchange = () => {
       return value;
     }
   };
-  
-  const handleCardChange = (e) => {
-    const { value } = e.target;
-    const formattedValue = formatCardNumber(value);
-    
-    setFormData({
-      ...formData,
-      card: formattedValue
-    });
-    
-    if (errors.card) {
-      setErrors({
-        ...errors,
-        card: null
-      });
-    }
+
+  const handleCardNumberChange = (e) => {
+    const value = e.target.value;
+    setCardNumber(formatCardNumber(value));
   };
-  
-  // Update amount when rate changes
-  useEffect(() => {
-    const numValue = parseFloat(formData.amount) || 0;
-    setReceiveAmount((numValue * currentRate).toFixed(2));
-  }, [currentRate, formData.amount]);
-  
-  // Animation variants
-  const fadeIn = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      transition: { duration: 0.4, ease: "easeOut" }
-    },
-    exit: { 
-      opacity: 0, 
-      y: -20,
-      transition: { duration: 0.2 }
-    }
+
+  const pageVariants = {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0, transition: { duration: 0.5 } },
+    exit: { opacity: 0, y: -20, transition: { duration: 0.3 } }
   };
-  
+
   return (
-    <PageContainer>
-      <ParticlesBackground type="matrix" />
-      <Layout>
-        <Header 
-          title="Обмен USDT → RUB" 
-          subtitle="Быстрый и безопасный обмен" 
-          backTo="/"
-        />
+    <Container>
+      <Header />
+      <Content>
+        <RateCard>
+          <RateColumn>
+            <RateLabel>Покупка USDT</RateLabel>
+            <RateValue type="buy">{rates.buy} ₽</RateValue>
+          </RateColumn>
+          <RateColumn>
+            <RateLabel>Продажа USDT</RateLabel>
+            <RateValue type="sell">{rates.sell} ₽</RateValue>
+          </RateColumn>
+        </RateCard>
         
-        <StepIndicator>
-          <Step>
-            <StepDot active={step === 1} completed={step > 1}>1</StepDot>
-            <StepLabel active={step === 1}>Сумма</StepLabel>
-          </Step>
-          <Step>
-            <StepDot active={step === 2} completed={step > 2}>2</StepDot>
-            <StepLabel active={step === 2}>Реквизиты</StepLabel>
-          </Step>
-          <Step>
-            <StepDot active={step === 3} completed={step > 3}>3</StepDot>
-            <StepLabel active={step === 3}>Оплата</StepLabel>
-          </Step>
-        </StepIndicator>
-        
-        <ContentGrid>
-          <AnimatePresence mode="wait">
-            {step === 1 && (
-              <motion.div
-                key="step1"
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-                variants={fadeIn}
-              >
-                <ExchangeCard type={CardTypes.FROSTED} title="Детали обмена">
-                  <FormSection>
-                    <InputGroup>
-                      <FormLabel>Вы отправляете</FormLabel>
-                      <Input 
-                        type="number" 
-                        name="amount" 
-                        value={formData.amount} 
-                        onChange={handleInputChange}
-                        placeholder="0.00"
-                        error={errors.amount}
-                        fullWidth
-                      />
-                      <CurrencyIndicator>USDT</CurrencyIndicator>
-                    </InputGroup>
-                    
-                    <InputGroup>
-                      <FormLabel>Вы получаете</FormLabel>
-                      <Input 
-                        type="text" 
-                        value={receiveAmount} 
-                        readOnly 
-                        fullWidth
-                      />
-                      <CurrencyIndicator>RUB</CurrencyIndicator>
-                    </InputGroup>
-                    
-                    <RateDisplay>
-                      <RateTitle>Текущий курс:</RateTitle>
-                      <RateValue>1 USDT = {currentRate} RUB</RateValue>
-                    </RateDisplay>
-                    
-                    <InputGroup>
-                      <FormLabel>Email для связи</FormLabel>
-                      <Input 
-                        type="email" 
-                        name="email" 
-                        value={formData.email} 
-                        onChange={handleInputChange}
-                        placeholder="example@mail.com"
-                        error={errors.email}
-                        fullWidth
-                      />
-                    </InputGroup>
-                  </FormSection>
-                  
-                  <InfoMessage
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                  >
-                    <SecurityIcon size="20px" color="var(--info)" />
-                    <InfoText>
-                      Мы соблюдаем требования AML/KYC. Возможна дополнительная верификация для крупных сумм.
-                    </InfoText>
-                  </InfoMessage>
-                  
-                  <Button 
-                    onClick={handleNextStep} 
-                    variant={ButtonVariants.GRADIENT}
-                    size={ButtonSizes.LARGE}
-                    fullWidth
-                  >
-                    Продолжить
-                  </Button>
-                </ExchangeCard>
-              </motion.div>
+        <Card>
+          <ExchangeForm onSubmit={handleSubmit}>
+            <FormGroup>
+              <Label>Выберите операцию</Label>
+              <RadioGroup>
+                <RadioLabel checked={exchangeType === 'buy'}>
+                  <RadioInput 
+                    type="radio" 
+                    name="type" 
+                    value="buy" 
+                    checked={exchangeType === 'buy'} 
+                    onChange={() => setExchangeType('buy')} 
+                  />
+                  <RadioText checked={exchangeType === 'buy'}>Купить USDT</RadioText>
+                </RadioLabel>
+                <RadioLabel checked={exchangeType === 'sell'}>
+                  <RadioInput 
+                    type="radio" 
+                    name="type" 
+                    value="sell" 
+                    checked={exchangeType === 'sell'} 
+                    onChange={() => setExchangeType('sell')} 
+                  />
+                  <RadioText checked={exchangeType === 'sell'}>Продать USDT</RadioText>
+                </RadioLabel>
+              </RadioGroup>
+            </FormGroup>
+            
+            <FormGroup>
+              <Label>{exchangeType === 'buy' ? 'Сумма в рублях' : 'Количество USDT'}</Label>
+              <Input 
+                type="number" 
+                placeholder={exchangeType === 'buy' ? 'Введите сумму в рублях' : 'Введите количество USDT'} 
+                value={amount} 
+                onChange={(e) => setAmount(e.target.value)}
+                min="0"
+                step="0.01"
+                required
+              />
+              <CalculationRow>
+                <span>Вы {exchangeType === 'buy' ? 'получите' : 'получите'}:</span>
+                <strong>{calculatedAmount} {exchangeType === 'buy' ? 'USDT' : '₽'}</strong>
+              </CalculationRow>
+            </FormGroup>
+            
+            {exchangeType === 'buy' && (
+              <FormGroup>
+                <Label>Ваша банковская карта</Label>
+                <Input 
+                  type="text" 
+                  placeholder="Номер карты" 
+                  value={cardNumber} 
+                  onChange={handleCardNumberChange}
+                  maxLength="19"
+                  required
+                />
+              </FormGroup>
             )}
             
-            {step === 2 && (
-              <motion.div
-                key="step2"
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-                variants={fadeIn}
+            <FormGroup>
+              <Label>Способ оплаты</Label>
+              <Select 
+                value={paymentMethod} 
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                required
               >
-                <ExchangeCard type={CardTypes.FROSTED} title="Реквизиты для получения">
-                  <FormSection>
-                    <InputGroup>
-                      <FormLabel>Номер карты</FormLabel>
-                      <Input 
-                        type="text" 
-                        name="card" 
-                        value={formData.card} 
-                        onChange={handleCardChange}
-                        placeholder="0000 0000 0000 0000"
-                        error={errors.card}
-                        fullWidth
-                        maxLength={19}
-                      />
-                    </InputGroup>
-                    
-                    <InputGroup>
-                      <FormLabel>Полное имя держателя</FormLabel>
-                      <Input 
-                        type="text" 
-                        name="fullName" 
-                        value={formData.fullName} 
-                        onChange={handleInputChange}
-                        placeholder="IVAN IVANOV"
-                        error={errors.fullName}
-                        fullWidth
-                      />
-                    </InputGroup>
-                  </FormSection>
-                  
-                  <InfoMessage
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                  >
-                    <SecurityIcon size="20px" color="var(--info)" />
-                    <InfoText>
-                      Имя получателя должно совпадать с именем отправителя для соблюдения AML требований
-                    </InfoText>
-                  </InfoMessage>
-                  
-                  <Button 
-                    onClick={handleNextStep} 
-                    variant={ButtonVariants.GRADIENT}
-                    size={ButtonSizes.LARGE}
-                    fullWidth
-                  >
-                    Продолжить
-                  </Button>
-                </ExchangeCard>
-              </motion.div>
-            )}
+                <option value="tinkoff">Тинькофф</option>
+                <option value="sber">Сбербанк</option>
+                <option value="alfabank">Альфа-Банк</option>
+                <option value="qiwi">QIWI</option>
+                <option value="yoomoney">ЮMoney</option>
+              </Select>
+            </FormGroup>
             
-            {step === 3 && (
-              <motion.div
-                key="step3"
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-                variants={fadeIn}
-              >
-                <ExchangeCard type={CardTypes.FROSTED} title="Оплата">
-                  <FormSection>
-                    <h3 style={{ margin: '0 0 20px', color: 'var(--text-primary)' }}>
-                      Отправьте {formData.amount} USDT на следующий адрес:
-                    </h3>
-                    
-                    <InputGroup>
-                      <FormLabel>Адрес кошелька TRC20</FormLabel>
-                      <Input 
-                        type="text" 
-                        value="TG7uUMYzzNfG5ee3kWoLbGHvTG7VRygyLs" 
-                        readOnly 
-                        fullWidth
-                      />
-                    </InputGroup>
-                    
-                    <Button 
-                      onClick={() => navigator.clipboard.writeText("TG7uUMYzzNfG5ee3kWoLbGHvTG7VRygyLs")}
-                      variant={ButtonVariants.SECONDARY}
-                      size={ButtonSizes.MEDIUM}
-                      fullWidth
-                      style={{ marginBottom: '20px' }}
-                    >
-                      Скопировать адрес
-                    </Button>
-                    
-                    <InputGroup>
-                      <FormLabel>Номер заявки (укажите в комментарии к платежу)</FormLabel>
-                      <Input 
-                        type="text" 
-                        value="EX-2023-29834" 
-                        readOnly 
-                        fullWidth
-                      />
-                    </InputGroup>
-                  </FormSection>
-                  
-                  <InfoMessage
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                  >
-                    <SecurityIcon size="20px" color="var(--info)" />
-                    <InfoText>
-                      После получения платежа средства будут отправлены на указанную карту в течение 5-15 минут
-                    </InfoText>
-                  </InfoMessage>
-                  
-                  <Button 
-                    onClick={handleSubmit} 
-                    variant={ButtonVariants.SUCCESS}
-                    size={ButtonSizes.LARGE}
-                    fullWidth
-                  >
-                    Я оплатил, завершить
-                  </Button>
-                </ExchangeCard>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </ContentGrid>
-      </Layout>
-    </PageContainer>
+            {error && <ErrorMessage>{error}</ErrorMessage>}
+            {success && <SuccessMessage>Заявка успешно отправлена!</SuccessMessage>}
+            
+            <Button 
+              type="submit"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              disabled={loading}
+            >
+              {loading ? 'Отправка...' : `${exchangeType === 'buy' ? 'Купить' : 'Продать'} USDT`}
+            </Button>
+          </ExchangeForm>
+        </Card>
+        
+        <Footnote>
+          Нажимая на кнопку, вы соглашаетесь с условиями обмена. 
+          Курсы обновляются автоматически каждые 30 секунд.
+        </Footnote>
+      </Content>
+    </Container>
   );
 };
 
