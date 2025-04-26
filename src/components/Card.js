@@ -1,6 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
+import useSafeAnimation from '../hooks/useSafeAnimation';
 
 export const CardTypes = {
   PRIMARY: 'primary',
@@ -100,6 +101,30 @@ export const Card = ({
   className,
   ...props 
 }) => {
+  const isMounted = useSafeAnimation();
+  
+  if (!isMounted) {
+    return (
+      <CardContainer 
+        type={type} 
+        compact={compact}
+        fullHeight={fullHeight}
+        className={className}
+        {...props}
+      >
+        {title && (
+          <CardTitle>
+            {icon && icon}
+            {title}
+          </CardTitle>
+        )}
+        <CardContent>
+          {children}
+        </CardContent>
+      </CardContainer>
+    );
+  }
+  
   return (
     <CardContainer 
       type={type} 

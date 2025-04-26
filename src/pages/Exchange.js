@@ -11,6 +11,7 @@ import { ArrowRight } from '../components/Icons';
 import api from '../services/api';
 import Header from '../components/Header';
 import axios from 'axios';
+import useSafeAnimation from '../hooks/useSafeAnimation';
 
 const ExchangeContainer = styled(motion.div)`
   width: 100%;
@@ -327,6 +328,9 @@ const Exchange = () => {
   const [telegramWebApp, setTelegramWebApp] = useState(null);
   const [user, setUser] = useState(null);
 
+  // Добавляем хук для безопасной анимации
+  const isMounted = useSafeAnimation();
+
   // Инициализируем Telegram WebApp
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
@@ -533,6 +537,119 @@ const Exchange = () => {
     exit: { opacity: 0, y: -20, transition: { duration: 0.3 } }
   };
 
+  // Проверяем, что компонент смонтирован перед рендерингом с анимациями
+  if (!isMounted) {
+    return (
+      <Container>
+        <Header />
+        <Content>
+          <RateCard>
+            <RateColumn>
+              <RateLabel>Покупка USDT</RateLabel>
+              <RateValue type="buy">{rates.buy} ₽</RateValue>
+            </RateColumn>
+            <RateColumn>
+              <RateLabel>Продажа USDT</RateLabel>
+              <RateValue type="sell">{rates.sell} ₽</RateValue>
+            </RateColumn>
+          </RateCard>
+          
+          <Card>
+            <ExchangeForm onSubmit={handleSubmit}>
+              <FormGroup>
+                <Label>Выберите операцию</Label>
+                <RadioGroup>
+                  <RadioLabel checked={exchangeType === 'buy'}>
+                    <RadioInput 
+                      type="radio" 
+                      name="type" 
+                      value="buy" 
+                      checked={exchangeType === 'buy'} 
+                      onChange={() => setExchangeType('buy')} 
+                    />
+                    <RadioText checked={exchangeType === 'buy'}>Купить USDT</RadioText>
+                  </RadioLabel>
+                  <RadioLabel checked={exchangeType === 'sell'}>
+                    <RadioInput 
+                      type="radio" 
+                      name="type" 
+                      value="sell" 
+                      checked={exchangeType === 'sell'} 
+                      onChange={() => setExchangeType('sell')} 
+                    />
+                    <RadioText checked={exchangeType === 'sell'}>Продать USDT</RadioText>
+                  </RadioLabel>
+                </RadioGroup>
+              </FormGroup>
+              
+              <FormGroup>
+                <Label>{exchangeType === 'buy' ? 'Сумма в рублях' : 'Количество USDT'}</Label>
+                <Input 
+                  type="number" 
+                  placeholder={exchangeType === 'buy' ? 'Введите сумму в рублях' : 'Введите количество USDT'} 
+                  value={amount} 
+                  onChange={(e) => setAmount(e.target.value)}
+                  min="0"
+                  step="0.01"
+                  required
+                />
+                <CalculationRow>
+                  <span>Вы {exchangeType === 'buy' ? 'получите' : 'получите'}:</span>
+                  <strong>{calculatedAmount} {exchangeType === 'buy' ? 'USDT' : '₽'}</strong>
+                </CalculationRow>
+              </FormGroup>
+              
+              {exchangeType === 'buy' && (
+                <FormGroup>
+                  <Label>Ваша банковская карта</Label>
+                  <Input 
+                    type="text" 
+                    placeholder="Номер карты" 
+                    value={cardNumber} 
+                    onChange={handleCardNumberChange}
+                    maxLength="19"
+                    required
+                  />
+                </FormGroup>
+              )}
+              
+              <FormGroup>
+                <Label>Способ оплаты</Label>
+                <Select 
+                  value={paymentMethod} 
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  required
+                >
+                  <option value="tinkoff">Тинькофф</option>
+                  <option value="sber">Сбербанк</option>
+                  <option value="alfabank">Альфа-Банк</option>
+                  <option value="qiwi">QIWI</option>
+                  <option value="yoomoney">ЮMoney</option>
+                </Select>
+              </FormGroup>
+              
+              {error && <ErrorMessage>{error}</ErrorMessage>}
+              {success && <SuccessMessage>Заявка успешно отправлена!</SuccessMessage>}
+              
+              <Button 
+                type="submit"
+                disabled={loading}
+              >
+                {loading ? 'Отправка...' : `${exchangeType === 'buy' ? 'Купить' : 'Продать'} USDT`}
+              </Button>
+            </ExchangeForm>
+          </Card>
+          
+          <Footnote>
+            Нажимая на кнопку, вы соглашаетесь с условиями обмена. 
+            Курсы обновляются автоматически каждые 30 секунд.
+          </Footnote>
+        </Content>
+      </Container>
+    );
+  }
+
+  // Оригинальный return с анимациями
   return (
     <Container>
       <Header />
@@ -627,8 +744,6 @@ const Exchange = () => {
             
             <Button 
               type="submit"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
               disabled={loading}
             >
               {loading ? 'Отправка...' : `${exchangeType === 'buy' ? 'Купить' : 'Продать'} USDT`}

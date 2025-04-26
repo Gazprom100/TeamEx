@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
+import useSafeAnimation from '../hooks/useSafeAnimation';
 
 // Иконки
 import { IoHomeOutline, IoSwapHorizontalOutline, IoMenuOutline, IoChevronBack } from 'react-icons/io5';
@@ -71,6 +72,7 @@ function Header({ telegramUser }) {
   const location = useLocation();
   const isHome = location.pathname === '/';
   const tg = window.Telegram?.WebApp;
+  const isMounted = useSafeAnimation();
   
   // Обработчик возврата в Telegram
   const handleBackClick = () => {
@@ -78,6 +80,43 @@ function Header({ telegramUser }) {
       tg.close();
     }
   };
+
+  // Если компонент еще не смонтирован, возвращаем базовую версию без анимаций
+  if (!isMounted) {
+    return (
+      <HeaderContainer>
+        {isHome ? (
+          <Logo to="/">
+            <h1>TeamEx</h1>
+          </Logo>
+        ) : (
+          <BackButton onClick={handleBackClick}>
+            <IoChevronBack /> Назад
+          </BackButton>
+        )}
+        
+        {telegramUser && (
+          <UserInfo>
+            {telegramUser.photo_url && <img src={telegramUser.photo_url} alt={telegramUser.first_name} />}
+            <span>{telegramUser.first_name}</span>
+          </UserInfo>
+        )}
+        
+        <Navigation>
+          <NavItem active={location.pathname === '/'}>
+            <Link to="/">
+              <IoHomeOutline />
+            </Link>
+          </NavItem>
+          <NavItem active={location.pathname === '/exchange'}>
+            <Link to="/exchange">
+              <IoSwapHorizontalOutline />
+            </Link>
+          </NavItem>
+        </Navigation>
+      </HeaderContainer>
+    );
+  }
 
   return (
     <HeaderContainer>

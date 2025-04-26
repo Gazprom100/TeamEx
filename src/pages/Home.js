@@ -8,6 +8,7 @@ import ParticlesBackground from '../components/ParticlesBackground';
 import PriceChart from '../components/PriceChart';
 import { Card, CardTypes } from '../components/Card';
 import { ExchangeIcon, ChartIcon, WalletIcon, UserIcon, BankIcon, SecurityIcon, LogoIcon } from '../components/Icons';
+import useSafeAnimation from '../hooks/useSafeAnimation';
 
 const PageContainer = styled.div`
   display: flex;
@@ -145,6 +146,7 @@ const TeamExLogo = styled.span`
 
 const Home = () => {
   const navigate = useNavigate();
+  const isMounted = useSafeAnimation();
   
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -215,6 +217,98 @@ const Home = () => {
       onClick: () => navigate('/account')
     }
   ];
+  
+  // Не рендерим компонент с анимациями, если он ещё не смонтирован
+  if (!isMounted) {
+    return (
+      <PageContainer>
+        <ParticlesBackground />
+        <Layout>
+          <Hero>
+            <LogoContainer>
+              <LogoIcon size="40px" color="var(--accent-primary)" />
+              <LogoText>Team<span>Ex</span></LogoText>
+            </LogoContainer>
+            
+            <Tagline>
+              Безопасный и быстрый обмен криптовалют на рубли и обратно
+            </Tagline>
+            
+            <MainActions>
+              <Button 
+                variant={ButtonVariants.GRADIENT}
+                size="large"
+                onClick={handleExchangeClick}
+                icon={<ExchangeIcon size="20px" />}
+              >
+                Купить USDT
+              </Button>
+              <Button 
+                variant={ButtonVariants.OUTLINE}
+                size="large"
+                onClick={handleExchangeClick}
+                icon={<BankIcon size="20px" />}
+              >
+                Продать USDT
+              </Button>
+            </MainActions>
+          </Hero>
+          
+          <StatsRow>
+            <StatItem>
+              <StatValue>97.25 ₽</StatValue>
+              <StatLabel>USDT/RUB</StatLabel>
+            </StatItem>
+            <StatItem>
+              <StatValue>95.30 ₽</StatValue>
+              <StatLabel>RUB/USDT</StatLabel>
+            </StatItem>
+            <StatItem>
+              <StatValue>5 мин.</StatValue>
+              <StatLabel>Скорость</StatLabel>
+            </StatItem>
+          </StatsRow>
+          
+          <PriceChart 
+            height="220px"
+            marginBottom="30px"
+          />
+          
+          <MenuGrid>
+            {menuItems.map((item) => (
+              <MenuCard
+                key={item.id}
+                type={CardTypes.FROSTED}
+                clickable
+                onClick={item.onClick}
+              >
+                <IconContainer>
+                  {item.icon}
+                </IconContainer>
+                <MenuTitle>{item.title}</MenuTitle>
+                <MenuDescription>{item.description}</MenuDescription>
+              </MenuCard>
+            ))}
+          </MenuGrid>
+          
+          <Card 
+            type={CardTypes.FROSTED}
+            icon={<SecurityIcon size="20px" color="var(--info)" />}
+            title="Безопасный обмен"
+          >
+            <MenuDescription>
+              Мы используем передовые технологии шифрования и соблюдаем требования KYC/AML для обеспечения безопасности ваших транзакций. Все обмены происходят автоматически без участия третьих лиц.
+            </MenuDescription>
+          </Card>
+          
+          <PoweredBy>
+            <PoweredByText>Powered by</PoweredByText>
+            <TeamExLogo>TeamEx Exchange</TeamExLogo>
+          </PoweredBy>
+        </Layout>
+      </PageContainer>
+    );
+  }
   
   return (
     <PageContainer>
