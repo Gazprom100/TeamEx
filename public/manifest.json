@@ -1,6 +1,6 @@
 {
   "short_name": "TeamEx",
-  "name": "TeamEx - Революция в обмене криптовалют",
+  "name": "TeamEx Exchange",
   "icons": [
     {
       "src": "favicon.ico",
@@ -20,6 +20,6 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#121212",
-  "background_color": "#121212"
+  "theme_color": "#3772FF",
+  "background_color": "#0E131A"
 } 

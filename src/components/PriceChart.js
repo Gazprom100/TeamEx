@@ -63,7 +63,7 @@ const TimeControls = styled.div`
 `;
 
 const TimeButton = styled.button`
-  background: ${props => props.active ? 'rgba(var(--accent-primary-rgb), 0.2)' : 'rgba(255, 255, 255, 0.05)'};
+  background: ${props => props.active ? 'rgba(55, 114, 255, 0.2)' : 'rgba(255, 255, 255, 0.05)'};
   border: none;
   color: ${props => props.active ? 'var(--accent-primary)' : 'var(--text-secondary)'};
   padding: 4px 8px;
@@ -73,7 +73,7 @@ const TimeButton = styled.button`
   transition: all 0.2s ease;
   
   &:hover {
-    background: rgba(var(--accent-primary-rgb), 0.15);
+    background: rgba(55, 114, 255, 0.15);
   }
 `;
 
@@ -102,6 +102,11 @@ const PriceChart = ({
   const canvasRef = useRef(null);
   const [activeTimeframe, setActiveTimeframe] = React.useState('1W');
   const [priceChangePercent, setPriceChangePercent] = React.useState(2.1);
+  
+  // Константы для цветов (вместо CSS-переменных)
+  const ACCENT_COLOR = '#3772FF';
+  const SUCCESS_COLOR = '#00B775';
+  const DANGER_COLOR = '#F53B57';
   
   const drawChart = (data) => {
     const canvas = canvasRef.current;
@@ -137,7 +142,7 @@ const PriceChart = ({
     }
     
     // Draw price line
-    ctx.strokeStyle = 'rgba(var(--accent-primary-rgb), 0.8)';
+    ctx.strokeStyle = 'rgba(55, 114, 255, 0.8)'; // Hard-coded RGBA вместо var(--accent-primary-rgb)
     ctx.lineWidth = 2;
     ctx.beginPath();
     
@@ -156,10 +161,10 @@ const PriceChart = ({
     
     ctx.stroke();
     
-    // Create gradient fill
+    // Create gradient fill - используем конкретные значения RGBA вместо CSS-переменных
     const gradient = ctx.createLinearGradient(0, padding, 0, height - padding);
-    gradient.addColorStop(0, 'rgba(var(--accent-primary-rgb), 0.2)');
-    gradient.addColorStop(1, 'rgba(var(--accent-primary-rgb), 0)');
+    gradient.addColorStop(0, 'rgba(55, 114, 255, 0.2)'); // Hard-coded RGBA вместо var(--accent-primary-rgb)
+    gradient.addColorStop(1, 'rgba(55, 114, 255, 0)');   // Hard-coded RGBA вместо var(--accent-primary-rgb)
     
     ctx.fillStyle = gradient;
     ctx.beginPath();
@@ -182,8 +187,8 @@ const PriceChart = ({
     ctx.closePath();
     ctx.fill();
     
-    // Draw points
-    ctx.fillStyle = 'var(--accent-primary)';
+    // Draw points - используем конкретный цвет вместо CSS-переменной
+    ctx.fillStyle = ACCENT_COLOR; // Hard-coded value вместо var(--accent-primary)
     for (let i = 0; i < data.length; i += Math.floor(data.length / 5)) {
       const x = padding + (chartWidth / (data.length - 1)) * i;
       const yNormalized = (data[i] - min) / range;
