@@ -1,64 +1,39 @@
 import React from 'react';
 import styled from 'styled-components';
-import Header from './Header';
+import { motion } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
 
-const Container = styled.div`
+const Container = styled(motion.div)`
+  max-width: 500px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 20px;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, var(--dark-background) 0%, var(--dark-background-lighter) 100%);
 `;
 
-const Content = styled.main`
-  flex: 1;
-  padding: 20px;
-  overflow-y: auto;
+const Content = styled.div`
+  flex-grow: 1;
+  width: 100%;
+  position: relative;
+  z-index: 1;
 `;
 
-const FooterButton = styled.div`
-  padding: 20px;
-`;
-
-const Layout = ({ 
-  title, 
-  subtitle,
-  children, 
-  showBackButton = true, 
-  showMenu = true,
-  footerButtonText,
-  onFooterButtonClick
-}) => {
+export const Layout = ({ children }) => {
+  const location = useLocation();
+  
   return (
-    <Container>
-      <Header 
-        title={title} 
-        subtitle={subtitle} 
-        showBackButton={showBackButton} 
-        showMenu={showMenu} 
-      />
+    <Container
+      key={location.pathname}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.3 }}
+    >
       <Content>
         {children}
       </Content>
-      {footerButtonText && (
-        <FooterButton>
-          <button 
-            onClick={onFooterButtonClick}
-            style={{
-              backgroundColor: 'transparent',
-              border: 'none',
-              color: 'var(--text-white)',
-              width: '100%',
-              padding: '16px',
-              borderRadius: '8px',
-              fontSize: '16px',
-              textAlign: 'center',
-              border: '1px solid rgba(255, 255, 255, 0.1)'
-            }}
-          >
-            {footerButtonText}
-          </button>
-        </FooterButton>
-      )}
     </Container>
   );
 };

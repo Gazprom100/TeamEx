@@ -1,6 +1,6 @@
 {
-  "short_name": "Mosca",
-  "name": "Mosca - Обмен криптовалют",
+  "short_name": "TeamEx",
+  "name": "TeamEx - Революция в обмене криптовалют",
   "icons": [
     {
       "src": "favicon.ico",
@@ -20,6 +20,6 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#121212",
+  "background_color": "#121212"
 } 

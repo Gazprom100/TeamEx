@@ -1,87 +1,91 @@
 import React from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { ArrowLeftIcon } from './Icons';
 
 const HeaderContainer = styled.header`
   display: flex;
-  align-items: center;
-  padding: 16px;
-  background-color: var(--dark-background);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-`;
-
-const BackButton = styled.button`
-  background: transparent;
-  border: none;
-  color: var(--text-white);
-  font-size: 24px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  padding: 0;
-`;
-
-const Title = styled.h1`
-  margin: 0 auto;
-  font-size: 20px;
-  font-weight: 500;
-  flex-grow: 1;
-  text-align: center;
-`;
-
-const SubTitle = styled.p`
-  font-size: 14px;
-  color: var(--text-gray);
-  margin: 0 auto;
-  text-align: center;
-`;
-
-const MenuButton = styled.button`
-  background: transparent;
-  border: none;
-  color: var(--text-white);
-  font-size: 24px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  padding-left: 16px;
-`;
-
-const TitleContainer = styled.div`
-  display: flex;
   flex-direction: column;
-  align-items: center;
+  margin-bottom: 20px;
 `;
 
-const Header = ({ title, subtitle, showBackButton = true, showMenu = true }) => {
+const BackButton = styled(motion.button)`
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 14px;
+  border-radius: var(--border-radius);
+  margin-bottom: 10px;
+  align-self: flex-start;
+  
+  &:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+  }
+  
+  svg {
+    margin-right: 6px;
+  }
+`;
+
+const Title = styled(motion.h1)`
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 5px;
+`;
+
+const Subtitle = styled(motion.p)`
+  font-size: 16px;
+  color: var(--text-secondary);
+  margin: 0;
+  font-weight: 400;
+`;
+
+export const Header = ({ title, subtitle, backTo }) => {
   const navigate = useNavigate();
-
-  const handleBackClick = () => {
-    navigate(-1);
+  
+  const handleBack = () => {
+    if (backTo) {
+      navigate(backTo);
+    } else {
+      navigate(-1);
+    }
   };
-
+  
   return (
     <HeaderContainer>
-      {showBackButton ? (
-        <BackButton onClick={handleBackClick}>
-          &#x2190; Назад
+      {backTo !== undefined && (
+        <BackButton 
+          onClick={handleBack}
+          whileTap={{ scale: 0.95 }}
+        >
+          <ArrowLeftIcon size="16px" />
+          Назад
         </BackButton>
-      ) : (
-        <div style={{ width: '24px' }} />
       )}
       
-      <TitleContainer>
-        <Title>{title}</Title>
-        {subtitle && <SubTitle>{subtitle}</SubTitle>}
-      </TitleContainer>
+      <Title
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        {title}
+      </Title>
       
-      {showMenu && (
-        <MenuButton aria-label="Menu">
-          &#8942;&#8942;&#8942;
-        </MenuButton>
+      {subtitle && (
+        <Subtitle
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+        >
+          {subtitle}
+        </Subtitle>
       )}
     </HeaderContainer>
   );

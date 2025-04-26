@@ -1,0 +1,138 @@
+:root {
+  /* Основные цвета */
+  --accent-primary: #3772FF;
+  --accent-primary-rgb: 55, 114, 255;
+  --accent-primary-hover: #2A62F5;
+  --accent-primary-active: #1F56E9;
+  
+  --accent-secondary: #4E6AF3;
+  --accent-secondary-rgb: 78, 106, 243;
+  
+  --success: #00B775;
+  --success-rgb: 0, 183, 117;
+  --success-hover: #00A66A;
+  --success-active: #00955F;
+  
+  --danger: #F53B57;
+  --danger-rgb: 245, 59, 87;
+  --danger-hover: #E02A46;
+  --danger-active: #CC1E39;
+  
+  --warning: #FFBA08;
+  --warning-rgb: 255, 186, 8;
+  
+  --info: #3DB9FF;
+  --info-rgb: 61, 185, 255;
+  
+  /* Цвета фона */
+  --dark-background: #0E131A;
+  --dark-background-lighter: #14212A; 
+  
+  /* Цвета карточек */
+  --card-primary: rgba(21, 29, 40, 0.8);
+  --card-secondary: rgba(28, 36, 48, 0.8);
+  --card-border: rgba(255, 255, 255, 0.05);
+  
+  /* Цвета элементов */
+  --dark-button: rgba(34, 45, 60, 0.8);
+  --dark-button-hover: rgba(40, 51, 67, 0.9);
+  --dark-button-active: rgba(45, 57, 75, 1);
+  
+  --dark-input: rgba(18, 26, 36, 0.8);
+  --dark-border: rgba(255, 255, 255, 0.1);
+  
+  /* Цвета текста */
+  --text-primary: #FFFFFF;
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --text-tertiary: rgba(255, 255, 255, 0.4);
+  
+  /* Основные цвета */
+  --white: #FFFFFF;
+  --black: #000000;
+  
+  /* Радиусы */
+  --border-radius: 12px;
+  --button-radius: 10px;
+  --input-radius: 10px;
+  
+  /* Тени */
+  --shadow-light: 0 4px 10px rgba(0, 0, 0, 0.05);
+  --shadow-medium: 0 6px 20px rgba(0, 0, 0, 0.1);
+  --shadow-strong: 0 10px 30px rgba(0, 0, 0, 0.15);
+  
+  /* Анимации */
+  --transition-fast: 0.15s ease;
+  --transition-medium: 0.25s ease;
+  --transition-slow: 0.4s ease;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--dark-background);
+  color: var(--text-primary);
+}
+
+/* Стили для скроллбара */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Устранение стандартного поведения браузера для input number */
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { 
+  -webkit-appearance: none; 
+  margin: 0; 
+}
+
+/* Стили ссылок */
+a {
+  color: var(--accent-primary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--accent-primary-hover);
+}
+
+/* Глобальные анимации */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+} 
