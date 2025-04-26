@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
+import useSafeAnimation from '../hooks/useSafeAnimation';
 
 const ChartContainer = styled(motion.div)`
   width: 100%;
@@ -102,6 +103,7 @@ const PriceChart = ({
   const canvasRef = useRef(null);
   const [activeTimeframe, setActiveTimeframe] = React.useState('1W');
   const [priceChangePercent, setPriceChangePercent] = React.useState(2.1);
+  const isMounted = useSafeAnimation(); // Используем хук для безопасной анимации
   
   // Константы для цветов (вместо CSS-переменных)
   const ACCENT_COLOR = '#3772FF';
@@ -201,8 +203,10 @@ const PriceChart = ({
   };
   
   useEffect(() => {
+    // Выходим, если компонент не смонтирован или canvasRef еще не инициализирован
+    if (!isMounted || !canvasRef.current) return;
+    
     const canvas = canvasRef.current;
-    if (!canvas) return;
     
     // Set canvas size
     canvas.width = canvas.offsetWidth * 2;
@@ -237,7 +241,7 @@ const PriceChart = ({
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, [activeTimeframe, priceChangePercent]);
+  }, [activeTimeframe, priceChangePercent, isMounted]); // Добавляем isMounted в зависимости
   
   const handleTimeframeChange = (timeframe) => {
     setActiveTimeframe(timeframe);
@@ -246,12 +250,17 @@ const PriceChart = ({
     setPriceChangePercent(parseFloat(randomChange));
   };
   
+  // Не рендерим компонент, если он еще не смонтирован
+  if (!isMounted) {
+    return null;
+  }
+  
   return (
     <ChartContainer 
       height={height}
       marginBottom={marginBottom}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
       transition={{ duration: 0.5, delay: 0.2 }}
     >
       <Canvas ref={canvasRef} />
