@@ -3,20 +3,136 @@
   <head>
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#3772FF" />
     <meta
       name="description"
-      content="TeamEx - Безопасный и быстрый обмен криптовалют"
+      content="TeamEx Exchange - сервис для обмена криптовалют на рубли и обратно"
     />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    
+    <!-- Предзагрузка иконок -->
+    <link rel="preload" href="%PUBLIC_URL%/logo192.png" as="image" />
+    <link rel="preload" href="%PUBLIC_URL%/logo512.png" as="image" />
+    
+    <!-- Указываем явные размеры -->
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" sizes="192x192" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    
+    <!-- Шрифты -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
     <title>TeamEx Exchange</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <style>
+      /* Стили для предварительной загрузки */
+      body {
+        background: #0E131A;
+        color: #FFFFFF;
+        font-family: 'Inter', sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+      
+      #root {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      
+      .loader {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #0E131A;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+      }
+      
+      .loader-content {
+        text-align: center;
+      }
+      
+      .loader-logo {
+        width: 80px;
+        height: 80px;
+        margin-bottom: 20px;
+        border-radius: 50%;
+        background: #151E2A;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+        animation: pulse 1.5s infinite ease-in-out;
+      }
+      
+      .loader-text {
+        font-size: 18px;
+        font-weight: 600;
+        margin-top: 10px;
+        color: #FFFFFF;
+        letter-spacing: 1px;
+      }
+      
+      @keyframes pulse {
+        0% { transform: scale(0.95); opacity: 0.7; }
+        50% { transform: scale(1.05); opacity: 1; }
+        100% { transform: scale(0.95); opacity: 0.7; }
+      }
+    </style>
   </head>
   <body>
-    <noscript>Для работы приложения необходимо включить JavaScript.</noscript>
-    <div id="root"></div>
+    <noscript>Для работы этого приложения необходимо включить JavaScript.</noscript>
+    <div id="root">
+      <!-- Элемент для отображения загрузки -->
+      <div class="loader">
+        <div class="loader-content">
+          <div class="loader-logo">
+            <span style="color: #3772FF; font-size: 24px; font-weight: bold;">T</span>
+          </div>
+          <div class="loader-text">TeamEx</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Обработчик ошибок -->
+    <script>
+      window.onerror = function(message, source, lineno, colno, error) {
+        console.error('Caught JS error:', message, 'at', source, lineno, colno);
+        // В реальном приложении здесь можно отправлять ошибки на сервер
+        return false;
+      };
+      
+      // Исправление для Telegram WebApp
+      if (window.Telegram && window.Telegram.WebApp) {
+        document.addEventListener('DOMContentLoaded', function() {
+          window.Telegram.WebApp.ready();
+          window.Telegram.WebApp.expand();
+        });
+      }
+      
+      // Проверяем загрузку изображений
+      function handleImageLoaded(img) {
+        img.classList.add('loaded');
+      }
+      
+      document.addEventListener('DOMContentLoaded', function() {
+        const images = document.querySelectorAll('img');
+        images.forEach(img => {
+          if (img.complete) {
+            handleImageLoaded(img);
+          } else {
+            img.addEventListener('load', function() {
+              handleImageLoaded(img);
+            });
+          }
+        });
+      });
+    </script>
   </body>
 </html> 

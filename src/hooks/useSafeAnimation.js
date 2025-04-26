@@ -4,10 +4,13 @@ export const useSafeAnimation = () => {
   const [isMounted, setIsMounted] = useState(false);
   
   useEffect(() => {
-    // Устанавливаем состояние монтирования только после того, как компонент полностью отрендерен
+    // Проверка на наличие Telegram WebApp
+    const isTelegramWebApp = window.Telegram && window.Telegram.WebApp;
+    
+    // Увеличенный таймаут для полной загрузки DOM
     const timeout = setTimeout(() => {
       setIsMounted(true);
-    }, 50);
+    }, isTelegramWebApp ? 300 : 150); // Увеличиваем таймаут для Telegram WebApp
     
     return () => {
       clearTimeout(timeout);

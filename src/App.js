@@ -1,80 +1,109 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import styled from 'styled-components';
-import { setupTelegramWebApp } from './services/api';
-
-// Компоненты
+import styled, { ThemeProvider } from 'styled-components';
+import GlobalStyle from './styles/GlobalStyle';
 import Home from './pages/Home';
 import Exchange from './pages/Exchange';
-import Header from './components/Header';
-import Footer from './components/Footer';
+import { lightTheme, darkTheme } from './styles/theme';
 
-// Стилизованные компоненты
-const AppContainer = styled.div`
+// Установка функций для работы с Telegram WebApp API
+const initTelegramWebApp = () => {
+  if (!window.Telegram || !window.Telegram.WebApp) {
+    console.log('Telegram WebApp not available, running in standalone mode');
+    return { user: null, webApp: null };
+  }
+  
+  try {
+    const webApp = window.Telegram.WebApp;
+    
+    // Расширяем WebApp на весь экран
+    webApp.expand();
+    
+    // Применяем тему Telegram
+    const colorScheme = webApp.colorScheme || 'dark';
+    
+    // Готовность WebApp
+    webApp.ready();
+    
+    console.log('Telegram WebApp initialized:', webApp.initDataUnsafe);
+    
+    return {
+      user: webApp.initDataUnsafe?.user || null,
+      webApp,
+      colorScheme
+    };
+  } catch (error) {
+    console.error('Error initializing Telegram WebApp:', error);
+    return { user: null, webApp: null };
+  }
+};
+
+const Container = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: linear-gradient(135deg, #0E131A 0%, #151E2A 100%);
-  color: #ffffff;
-  font-family: 'Inter', sans-serif;
-  
-  /* Адаптация под Telegram темы */
-  [data-theme="dark"] & {
-    background: linear-gradient(135deg, #0E131A 0%, #151E2A 100%);
-  }
-  
-  [data-theme="light"] & {
-    background: linear-gradient(135deg, #F5F7FA 0%, #E9EDF5 100%);
-    color: #121212;
-  }
-`;
-
-const Content = styled.main`
-  flex: 1;
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
+  background: ${props => props.theme.background};
+  color: ${props => props.theme.textPrimary};
 `;
 
 function App() {
+  const [theme, setTheme] = useState(darkTheme);
   const [telegramUser, setTelegramUser] = useState(null);
-  const [telegramTheme, setTelegramTheme] = useState('dark');
   
   useEffect(() => {
-    // Инициализация Telegram WebApp
-    const tg = setupTelegramWebApp();
-    
-    if (tg) {
-      // Сохраняем информацию о пользователе если есть
-      if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-        setTelegramUser(tg.initDataUnsafe.user);
-      }
-      
-      // Устанавливаем тему
-      setTelegramTheme(tg.colorScheme || 'dark');
-      
-      // Добавляем слушатель изменения темы
-      tg.onEvent('themeChanged', () => {
-        setTelegramTheme(tg.colorScheme);
+    // Загружаем иконки предварительно для предотвращения ошибок
+    const preloadIcons = () => {
+      const iconUrls = ['/favicon.ico', '/logo192.png', '/logo512.png'];
+      iconUrls.forEach(url => {
+        const img = new Image();
+        img.src = url;
       });
+    };
+    
+    // Инициализируем Telegram WebApp
+    const { user, colorScheme } = initTelegramWebApp();
+    
+    // Устанавливаем пользователя
+    if (user) {
+      setTelegramUser(user);
     }
+    
+    // Устанавливаем тему в зависимости от настроек Telegram
+    if (colorScheme === 'light') {
+      setTheme(lightTheme);
+    } else {
+      setTheme(darkTheme);
+    }
+    
+    // Предзагрузка иконок
+    preloadIcons();
+    
+    // Добавляем обработчик ошибок
+    const errorHandler = (event) => {
+      console.error('Caught error:', event.error || event.message);
+      // Можно отправить ошибку на сервер для анализа
+    };
+    
+    window.addEventListener('error', errorHandler);
+    
+    return () => {
+      window.removeEventListener('error', errorHandler);
+    };
   }, []);
-
+  
   return (
-    <AppContainer>
-      <Router>
-        <Header telegramUser={telegramUser} />
-        <Content>
+    <ThemeProvider theme={theme}>
+      <GlobalStyle />
+      <Container>
+        <Router>
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<Home telegramUser={telegramUser} />} />
             <Route path="/exchange" element={<Exchange telegramUser={telegramUser} />} />
-            {/* Добавьте здесь новые маршруты */}
+            {/* Здесь могут быть дополнительные маршруты */}
           </Routes>
-        </Content>
-        <Footer />
-      </Router>
-    </AppContainer>
+        </Router>
+      </Container>
+    </ThemeProvider>
   );
 }
 
