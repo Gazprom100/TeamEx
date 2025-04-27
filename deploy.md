@@ -4,7 +4,13 @@
 
 Проект TeamEx может быть размещен на сервисе Render. При этом могут возникать некоторые проблемы с билдом, которые решаются следующим образом:
 
-### 1. Проблема: Ошибка "Module not found: Error: Can't resolve 'axios'"
+### 1. Проблема: Тип сервиса
+
+**Важно!** Проект должен быть создан как тип "Web Service", а не "Static Site"! 
+
+Static Site на Render только раздает статические файлы и не запускает Node.js сервер. Для нашего проекта, который включает Express сервер и Telegram-бота, необходимо использовать тип "Web Service".
+
+### 2. Проблема: Ошибка "Module not found: Error: Can't resolve 'axios'"
 
 **Решение**: Добавьте axios в зависимости проекта:
 
@@ -12,13 +18,21 @@
 npm install axios --save
 ```
 
-### 2. Проблема: Ошибка с canvas при установке
+### 3. Проблема: Ошибка "Module not found: Error: Can't resolve 'react-icons/io5'"
+
+**Решение**: Установите пакет react-icons:
+
+```bash
+npm install react-icons --save
+```
+
+### 4. Проблема: Ошибка с canvas при установке
 
 **Решение**: Canvas требует системных зависимостей, которые могут отсутствовать в среде Render. Лучше использовать SVG-иконки вместо Canvas:
 
 1. Отключите postinstall скрипт, который запускает build или измените его:
    ```json
-   "postinstall": "echo 'Skip build in CI' || npm run build"
+   "postinstall": "echo 'Skip build in CI environment' || npm run build"
    ```
 
 2. В Render создайте пустые файлы для иконок:
@@ -28,13 +42,13 @@ npm install axios --save
    touch public/favicon.ico
    ```
 
-### 3. Настройка переменных окружения
+### 5. Настройка переменных окружения
 
 В Render настройте следующие переменные окружения:
 - `PORT` - можно оставить пустым, Render назначит свой порт
 - `BOT_TOKEN` - токен вашего Telegram-бота
 
-### 4. Команды для Render
+### 6. Команды для Render
 
 - **Build Command**: `npm install && npm run build`
 - **Start Command**: `node server.js`
