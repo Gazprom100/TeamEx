@@ -11,8 +11,39 @@ const isTelegramWebApp = typeof window !== 'undefined' && window.Telegram && win
 // Проверка наличия тачскрина или мобильного устройства
 const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
+// Проверка глобальных флагов отключения анимаций
+const isAnimationsDisabled = typeof window !== 'undefined' && 
+  (window.DISABLE_ALL_ANIMATIONS || window.DISABLE_COMPLEX_ANIMATIONS);
+
 // Определяем, нужно ли отключить анимации полностью
-const shouldDisableAnimations = isProduction && (isTelegramWebApp || isTouchDevice);
+const shouldDisableAnimations = isProduction && (
+  isAnimationsDisabled || isTelegramWebApp || isTouchDevice
+);
+
+/**
+ * Проверяет, разрешены ли сложные анимации в текущей среде
+ * @returns {Boolean} - true если анимации разрешены, false если нет
+ */
+export const areComplexAnimationsAllowed = () => {
+  if (typeof window === 'undefined') return false;
+  
+  // Если явно отключены сложные анимации - запрещаем
+  if (window.DISABLE_COMPLEX_ANIMATIONS || window.DISABLE_ALL_ANIMATIONS) {
+    return false;
+  }
+  
+  // В автономном режиме (не в Telegram) разрешаем простые анимации
+  if (!isTelegramWebApp) {
+    return true;
+  }
+  
+  // В Telegram WebApp на мобильных устройствах запрещаем сложные анимации
+  if (isTelegramWebApp && isTouchDevice) {
+    return false;
+  }
+  
+  return true;
+};
 
 /**
  * Возвращает пустые свойства анимации, если анимации отключены
@@ -24,6 +55,20 @@ export const safeAnimationProps = (animationProps = {}) => {
     // Возвращаем пустые свойства для отключения анимаций
     return {};
   }
+  
+  // Если отключены только сложные анимации, удаляем hover и drag
+  if (typeof window !== 'undefined' && window.DISABLE_COMPLEX_ANIMATIONS) {
+    const safeProps = { ...animationProps };
+    
+    // Удаляем свойства hover, tap и drag
+    delete safeProps.whileHover;
+    delete safeProps.whileTap;
+    delete safeProps.drag;
+    delete safeProps.dragConstraints;
+    
+    return safeProps;
+  }
+  
   return animationProps;
 };
 
@@ -39,11 +84,21 @@ export const safeVariants = (variants = {}) => {
     });
     return safeVariants;
   }
+  
+  // Если отключены только сложные анимации, удаляем hover и tap
+  if (typeof window !== 'undefined' && window.DISABLE_COMPLEX_ANIMATIONS) {
+    const safeVariants = { ...variants };
+    delete safeVariants.hover;
+    delete safeVariants.tap;
+    return safeVariants;
+  }
+  
   return variants;
 };
 
 export default {
   shouldDisableAnimations,
+  areComplexAnimationsAllowed,
   safeAnimationProps,
   safeVariants,
 }; 

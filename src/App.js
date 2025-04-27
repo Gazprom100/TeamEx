@@ -6,6 +6,9 @@ import Home from './pages/Home';
 import Exchange from './pages/Exchange';
 import { lightTheme, darkTheme } from './styles/theme';
 
+// Сохраняем оригинальный метод addEventListener
+let originalAddEventListener;
+
 // Компонент для обработки ошибок
 class ErrorFallback extends React.Component {
   constructor(props) {
@@ -60,6 +63,8 @@ class ErrorFallback extends React.Component {
 const initTelegramWebApp = () => {
   if (!window.Telegram || !window.Telegram.WebApp) {
     console.log('Telegram WebApp not available, running in standalone mode');
+    // В автономном режиме сразу отключаем сложные анимации
+    window.DISABLE_COMPLEX_ANIMATIONS = true;
     return { user: null, webApp: null };
   }
   
@@ -84,6 +89,7 @@ const initTelegramWebApp = () => {
     };
   } catch (error) {
     console.error('Error initializing Telegram WebApp:', error);
+    window.DISABLE_COMPLEX_ANIMATIONS = true;
     return { user: null, webApp: null };
   }
 };
@@ -96,25 +102,63 @@ const Container = styled.div`
   color: ${props => props.theme.textPrimary};
 `;
 
-// Патч для Framer Motion, отключающий проблемные функции
+// Расширенный патч для Framer Motion, отключающий проблемные функции
 const patchFramerMotion = () => {
-  // Глобальный флаг для отключения анимаций
+  // Глобальный флаг для отключения всех анимаций
   window.DISABLE_ALL_ANIMATIONS = false;
   
+  // Дополнительный флаг для отключения только сложных анимаций (hover, drag)
+  window.DISABLE_COMPLEX_ANIMATIONS = false;
+  
+  // Проверка, существует ли элемент в DOM
+  const isElementAttached = (element) => {
+    if (!element) return false;
+    try {
+      return element instanceof Element && document.contains(element);
+    } catch (e) {
+      return false;
+    }
+  };
+  
   // Перехват создания обработчиков событий
-  const originalAddEventListener = Element.prototype.addEventListener;
+  originalAddEventListener = Element.prototype.addEventListener;
   Element.prototype.addEventListener = function(type, listener, options) {
-    // Если элемент не в DOM или отключены анимации, не добавляем обработчик
-    if (window.DISABLE_ALL_ANIMATIONS || !document.contains(this)) {
+    // Полная блокировка всех анимаций
+    if (window.DISABLE_ALL_ANIMATIONS) {
       return;
     }
+    
+    // Блокировка только сложных анимаций (hover, drag)
+    if (window.DISABLE_COMPLEX_ANIMATIONS && 
+        (type.includes('mouse') || type.includes('pointer') || type.includes('touch'))) {
+      return;
+    }
+    
+    // Защита от попытки добавить обработчик к несуществующему элементу
+    if (!this || !isElementAttached(this)) {
+      return;
+    }
+    
     try {
       return originalAddEventListener.call(this, type, listener, options);
     } catch (error) {
-      console.warn('Failed to add event listener:', error);
+      console.warn('Failed to add event listener:', type, error);
       return null;
     }
   };
+  
+  // Патч для HTMLElement.prototype.attachShadow
+  const originalAttachShadow = HTMLElement.prototype.attachShadow;
+  if (originalAttachShadow) {
+    HTMLElement.prototype.attachShadow = function(...args) {
+      try {
+        return originalAttachShadow.apply(this, args);
+      } catch (error) {
+        console.warn('Failed to attach shadow DOM:', error);
+        return null;
+      }
+    };
+  }
 };
 
 function App() {
@@ -130,7 +174,7 @@ function App() {
     const initApp = async () => {
       try {
         // Задержка для инициализации DOM перед анимациями
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 800));
         
         // Предзагрузка иконок (с проверкой доступности)
         const preloadIcons = async () => {
@@ -186,14 +230,20 @@ function App() {
     const originalConsoleError = console.error;
     console.error = (...args) => {
       // Игнорируем специфические ошибки Framer Motion
-      if (args[0] && typeof args[0] === 'string' && 
-         (args[0].includes('addEventListener') || 
-          args[0].includes('framer-motion'))) {
-        // Отключаем анимации, если встречаем ошибку с addEventListener
-        if (args[0].includes('addEventListener')) {
-          window.DISABLE_ALL_ANIMATIONS = true;
+      if (args[0] && typeof args[0] === 'string') {
+        if (args[0].includes('addEventListener') || args[0].includes('framer-motion')) {
+          // Если ошибка связана с hover или drag, отключаем сложные анимации
+          if (args[0].includes('hover') || args[0].includes('drag') || 
+              args[0].includes('pointer') || args[0].includes('mouse')) {
+            window.DISABLE_COMPLEX_ANIMATIONS = true;
+          }
+          
+          // Отключаем все анимации только при серьезных ошибках
+          if (args[0].includes('addEventListener')) {
+            window.DISABLE_ALL_ANIMATIONS = true;
+          }
+          return;
         }
-        return;
       }
       originalConsoleError.apply(console, args);
     };

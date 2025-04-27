@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -9,7 +9,7 @@ import PriceChart from '../components/PriceChart';
 import { Card, CardTypes } from '../components/Card';
 import { ExchangeIcon, ChartIcon, WalletIcon, UserIcon, BankIcon, SecurityIcon, LogoIcon } from '../components/Icons';
 import AnimationSafeWrapper from '../components/AnimationSafeWrapper';
-import { safeAnimationProps, safeVariants } from '../utils/motionFeatureDetection';
+import { safeAnimationProps, safeVariants, areComplexAnimationsAllowed } from '../utils/motionFeatureDetection';
 
 const PageContainer = styled.div`
   display: flex;
@@ -196,6 +196,9 @@ const TeamExLogo = styled.span`
 const Home = () => {
   const navigate = useNavigate();
   
+  // Проверяем, разрешены ли сложные анимации
+  const complexAnimationsAllowed = useMemo(() => areComplexAnimationsAllowed(), []);
+  
   // Безопасные варианты анимации
   const containerVariants = safeVariants({
     hidden: { opacity: 0 },
@@ -217,6 +220,7 @@ const Home = () => {
     }
   });
   
+  // Определяем свойства анимации для карточек
   const cardVariants = safeVariants({
     hidden: { y: 20, opacity: 0 },
     visible: { 
@@ -224,12 +228,12 @@ const Home = () => {
       opacity: 1,
       transition: { type: "spring", stiffness: 300, damping: 24 }
     },
-    hover: { 
+    hover: complexAnimationsAllowed ? { 
       y: -5,
       boxShadow: '0 10px 20px rgba(0, 0, 0, 0.2)',
       transition: { type: "spring", stiffness: 300, damping: 20 }
-    },
-    tap: { scale: 0.98 }
+    } : undefined,
+    tap: complexAnimationsAllowed ? { scale: 0.98 } : undefined
   });
   
   const handleExchangeClick = () => {
@@ -407,8 +411,10 @@ const Home = () => {
                 key={item.id}
                 variants={cardVariants}
                 type={CardTypes.FROSTED}
-                whileHover="hover"
-                whileTap="tap"
+                {...(complexAnimationsAllowed ? {
+                  whileHover: "hover",
+                  whileTap: "tap"
+                } : {})}
                 clickable
                 onClick={item.onClick}
               >
