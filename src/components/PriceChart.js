@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import useSafeAnimation from '../hooks/useSafeAnimation';
@@ -9,9 +9,22 @@ const ChartContainer = styled(motion.div)`
   position: relative;
   overflow: hidden;
   border-radius: var(--border-radius);
-  background: rgba(21, 29, 40, 0.5);
-  padding: 20px;
+  background: rgba(21, 29, 40, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  padding: var(--spacing-md);
   margin-bottom: ${props => props.marginBottom || '0'};
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+    height: ${props => props.height || '220px'};
+  }
+  
+  @media (max-width: 576px) {
+    padding: var(--spacing-sm);
+    height: ${props => props.height || '180px'};
+  }
 `;
 
 const Canvas = styled.canvas`
@@ -28,8 +41,16 @@ const ChartOverlay = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 20px;
+  padding: var(--spacing-md);
   pointer-events: none;
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+  
+  @media (max-width: 576px) {
+    padding: var(--spacing-sm);
+  }
 `;
 
 const PriceInfo = styled.div`
@@ -39,28 +60,49 @@ const PriceInfo = styled.div`
 `;
 
 const CurrentPrice = styled.div`
-  font-size: 24px;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--text-primary);
   margin-bottom: 5px;
+  
+  @media (min-width: 768px) {
+    font-size: var(--font-size-xl);
+  }
+  
+  @media (max-width: 576px) {
+    font-size: var(--font-size-md);
+  }
 `;
 
 const PriceChange = styled.div`
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   font-weight: 500;
-  color: ${props => props.isPositive ? 'var(--success)' : 'var(--danger)'};
+  color: ${props => props.isPositive ? 'var(--success, #00B775)' : 'var(--danger, #F53B57)'};
   display: flex;
   align-items: center;
+  background: ${props => props.isPositive ? 'rgba(0, 183, 117, 0.1)' : 'rgba(245, 59, 87, 0.1)'};
+  padding: 2px 8px;
+  border-radius: 12px;
   
   svg {
     margin-right: 4px;
   }
 `;
 
+const CurrencyLabel = styled.div`
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+`;
+
 const TimeControls = styled.div`
   display: flex;
-  gap: 10px;
+  gap: 6px;
   pointer-events: auto;
+  
+  @media (min-width: 768px) {
+    gap: 10px;
+  }
 `;
 
 const TimeButton = styled.button`
@@ -69,24 +111,60 @@ const TimeButton = styled.button`
   color: ${props => props.active ? 'var(--accent-primary)' : 'var(--text-secondary)'};
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   cursor: pointer;
   transition: all 0.2s ease;
+  min-height: 28px;
   
   &:hover {
     background: rgba(55, 114, 255, 0.15);
   }
+  
+  &:active {
+    transform: scale(0.95);
+  }
+  
+  @media (max-width: 576px) {
+    padding: 2px 6px;
+    min-height: 24px;
+  }
+  
+  @media (hover: none) {
+    min-height: 32px;
+    
+    @media (max-width: 576px) {
+      min-height: 28px;
+    }
+  }
 `;
 
-// Функция для создания случайных данных
+// Функция для создания случайных данных с более реалистичными паттернами
 const generateDummyData = (days, trend = 'up') => {
   const data = [];
   let baseValue = 95 + Math.random() * 5;
   
+  // Создаем более реалистичные движения цены
+  let momentum = 0;
+  
   for (let i = 0; i < days; i++) {
-    const change = (Math.random() - (trend === 'up' ? 0.3 : 0.7)) * 2;
-    baseValue += change;
-    baseValue = Math.max(90, Math.min(100, baseValue));
+    // Учитываем текущий тренд
+    const trendBias = trend === 'up' ? 0.2 : -0.2;
+    
+    // Инерция предыдущих движений (momentum)
+    momentum = momentum * 0.9 + (Math.random() - 0.5 + trendBias) * 0.3;
+    
+    // Ограничиваем максимальное движение
+    if (momentum > 1) momentum = 1;
+    if (momentum < -1) momentum = -1;
+    
+    // Добавляем небольшую случайность для естественности
+    const randomNoise = (Math.random() - 0.5) * 0.2;
+    
+    // Итоговое изменение
+    baseValue += momentum + randomNoise;
+    
+    // Ограничиваем диапазон цены для USDT
+    baseValue = Math.max(92, Math.min(102, baseValue));
     
     data.push(baseValue);
   }
@@ -103,12 +181,38 @@ const PriceChart = ({
   const canvasRef = useRef(null);
   const [activeTimeframe, setActiveTimeframe] = React.useState('1W');
   const [priceChangePercent, setPriceChangePercent] = React.useState(2.1);
-  const isMounted = useSafeAnimation(); // Используем хук для безопасной анимации
+  const { isMounted, containerRef } = useSafeAnimation(300);
   
-  // Константы для цветов (вместо CSS-переменных)
-  const ACCENT_COLOR = '#3772FF';
-  const SUCCESS_COLOR = '#00B775';
-  const DANGER_COLOR = '#F53B57';
+  // Используем themeContext для определения цветов (можно получать из CSS переменных)
+  const getThemeColors = () => {
+    try {
+      const style = getComputedStyle(document.documentElement);
+      
+      // Пытаемся получить CSS переменные
+      const accentPrimaryRaw = style.getPropertyValue('--accent-primary') || '#3772FF';
+      const accentPrimaryRgbRaw = style.getPropertyValue('--accent-primary-rgb') || '55, 114, 255';
+      const successRaw = style.getPropertyValue('--success') || '#00B775';
+      const dangerRaw = style.getPropertyValue('--danger') || '#F53B57';
+      
+      return {
+        ACCENT_COLOR: accentPrimaryRaw,
+        ACCENT_RGB: accentPrimaryRgbRaw.split(',').map(n => parseInt(n.trim())),
+        SUCCESS_COLOR: successRaw,
+        DANGER_COLOR: dangerRaw
+      };
+    } catch (e) {
+      // Если не удалось получить переменные, используем значения по умолчанию
+      return {
+        ACCENT_COLOR: '#3772FF',
+        ACCENT_RGB: [55, 114, 255],
+        SUCCESS_COLOR: '#00B775',
+        DANGER_COLOR: '#F53B57'
+      };
+    }
+  };
+  
+  // Мемоизируем цвета, чтобы не вычислять их при каждом рендере
+  const themeColors = useMemo(() => getThemeColors(), []);
   
   const drawChart = (data) => {
     const canvas = canvasRef.current;
@@ -121,13 +225,19 @@ const PriceChart = ({
     // Clear canvas
     ctx.clearRect(0, 0, width, height);
     
-    const padding = 20;
+    // Масштабируем под ретина-дисплеи
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.scale(dpr, dpr);
+    
+    const padding = Math.min(width, height) * 0.1; // Адаптивный отступ
     const chartWidth = width - padding * 2;
     const chartHeight = height - padding * 2;
     
     // Find min and max values
-    const min = Math.min(...data) * 0.99;
-    const max = Math.max(...data) * 1.01;
+    const min = Math.min(...data) * 0.995;
+    const max = Math.max(...data) * 1.005;
     const range = max - min;
     
     // Draw grid lines
@@ -143,63 +253,91 @@ const PriceChart = ({
       ctx.stroke();
     }
     
-    // Draw price line
-    ctx.strokeStyle = 'rgba(55, 114, 255, 0.8)'; // Hard-coded RGBA вместо var(--accent-primary-rgb)
+    // Vertical grid lines (для таймфреймов)
+    for (let i = 0; i <= 4; i++) {
+      const x = padding + (chartWidth / 4) * i;
+      ctx.beginPath();
+      ctx.moveTo(x, padding);
+      ctx.lineTo(x, height - padding);
+      ctx.stroke();
+    }
+    
+    // Подготовка данных для отрисовки с более плавными линиями
+    const points = [];
+    for (let i = 0; i < data.length; i++) {
+      const x = padding + (chartWidth / (data.length - 1)) * i;
+      const normalizedValue = (data[i] - min) / range;
+      const y = height - padding - (normalizedValue * chartHeight);
+      points.push({ x, y });
+    }
+    
+    // Draw price line с более плавными изгибами
+    ctx.strokeStyle = `rgba(${themeColors.ACCENT_RGB.join(',')}, 0.8)`;
     ctx.lineWidth = 2;
     ctx.beginPath();
     
-    // Create line path
-    for (let i = 0; i < data.length; i++) {
-      const x = padding + (chartWidth / (data.length - 1)) * i;
-      const yNormalized = (data[i] - min) / range;
-      const y = height - padding - (yNormalized * chartHeight);
-      
-      if (i === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
+    // Используем кривую Безье для создания более плавной линии
+    ctx.moveTo(points[0].x, points[0].y);
+    
+    for (let i = 0; i < points.length - 1; i++) {
+      const xc = (points[i].x + points[i + 1].x) / 2;
+      const yc = (points[i].y + points[i + 1].y) / 2;
+      ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
     }
+    
+    // Последняя точка
+    ctx.quadraticCurveTo(
+      points[points.length - 2].x, 
+      points[points.length - 2].y, 
+      points[points.length - 1].x, 
+      points[points.length - 1].y
+    );
     
     ctx.stroke();
     
-    // Create gradient fill - используем конкретные значения RGBA вместо CSS-переменных
+    // Create gradient fill
     const gradient = ctx.createLinearGradient(0, padding, 0, height - padding);
-    gradient.addColorStop(0, 'rgba(55, 114, 255, 0.2)'); // Hard-coded RGBA вместо var(--accent-primary-rgb)
-    gradient.addColorStop(1, 'rgba(55, 114, 255, 0)');   // Hard-coded RGBA вместо var(--accent-primary-rgb)
+    gradient.addColorStop(0, `rgba(${themeColors.ACCENT_RGB.join(',')}, 0.2)`);
+    gradient.addColorStop(1, `rgba(${themeColors.ACCENT_RGB.join(',')}, 0)`);
     
     ctx.fillStyle = gradient;
     ctx.beginPath();
     
-    // Draw same line but close the path to bottom
-    for (let i = 0; i < data.length; i++) {
-      const x = padding + (chartWidth / (data.length - 1)) * i;
-      const yNormalized = (data[i] - min) / range;
-      const y = height - padding - (yNormalized * chartHeight);
-      
-      if (i === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
+    // Рисуем заполнение под линией
+    ctx.moveTo(points[0].x, points[0].y);
+    
+    for (let i = 0; i < points.length - 1; i++) {
+      const xc = (points[i].x + points[i + 1].x) / 2;
+      const yc = (points[i].y + points[i + 1].y) / 2;
+      ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
     }
+    
+    // Последняя точка
+    ctx.quadraticCurveTo(
+      points[points.length - 2].x, 
+      points[points.length - 2].y, 
+      points[points.length - 1].x, 
+      points[points.length - 1].y
+    );
     
     ctx.lineTo(width - padding, height - padding);
     ctx.lineTo(padding, height - padding);
     ctx.closePath();
     ctx.fill();
     
-    // Draw points - используем конкретный цвет вместо CSS-переменной
-    ctx.fillStyle = ACCENT_COLOR; // Hard-coded value вместо var(--accent-primary)
-    for (let i = 0; i < data.length; i += Math.floor(data.length / 5)) {
-      const x = padding + (chartWidth / (data.length - 1)) * i;
-      const yNormalized = (data[i] - min) / range;
-      const y = height - padding - (yNormalized * chartHeight);
-      
-      ctx.beginPath();
-      ctx.arc(x, y, 3, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    // Draw points - выделенные точки на линии
+    ctx.fillStyle = themeColors.ACCENT_COLOR;
+    
+    // Рисуем только начало, середину и конец для улучшения производительности
+    const keyPoints = [0, Math.floor(points.length / 2), points.length - 1];
+    
+    keyPoints.forEach(i => {
+      if (i < points.length) {
+        ctx.beginPath();
+        ctx.arc(points[i].x, points[i].y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
   };
   
   useEffect(() => {
@@ -209,17 +347,22 @@ const PriceChart = ({
     const canvas = canvasRef.current;
     
     // Set canvas size
-    canvas.width = canvas.offsetWidth * 2;
-    canvas.height = canvas.offsetHeight * 2;
+    const resize = () => {
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+    };
+    
+    resize();
     
     // Generate appropriate data based on timeframe
     let days;
     switch(activeTimeframe) {
       case '1D': days = 24; break;
-      case '1W': days = 7; break;
+      case '1W': days = 7 * 24 / 3; break; // 3-hour intervals for a week
       case '1M': days = 30; break;
       case '3M': days = 90; break;
-      default: days = 7;
+      default: days = 7 * 24 / 3;
     }
     
     const trend = priceChangePercent >= 0 ? 'up' : 'down';
@@ -227,21 +370,23 @@ const PriceChart = ({
     
     drawChart(data);
     
-    // Resize handler
+    // Resize handler with debounce
+    let resizeTimeout;
     const handleResize = () => {
-      if (canvas) {
-        canvas.width = canvas.offsetWidth * 2;
-        canvas.height = canvas.offsetHeight * 2;
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        resize();
         drawChart(data);
-      }
+      }, 100);
     };
     
     window.addEventListener('resize', handleResize);
     
     return () => {
       window.removeEventListener('resize', handleResize);
+      clearTimeout(resizeTimeout);
     };
-  }, [activeTimeframe, priceChangePercent, isMounted]); // Добавляем isMounted в зависимости
+  }, [activeTimeframe, priceChangePercent, isMounted, themeColors]); 
   
   const handleTimeframeChange = (timeframe) => {
     setActiveTimeframe(timeframe);
@@ -257,6 +402,7 @@ const PriceChart = ({
   
   return (
     <ChartContainer 
+      ref={containerRef}
       height={height}
       marginBottom={marginBottom}
       initial={{ opacity: 0 }}
@@ -267,6 +413,7 @@ const PriceChart = ({
       
       <ChartOverlay>
         <PriceInfo>
+          <CurrencyLabel>{currency}</CurrencyLabel>
           <CurrentPrice>{price} ₽</CurrentPrice>
           <PriceChange isPositive={priceChangePercent >= 0}>
             {priceChangePercent >= 0 ? (
@@ -288,24 +435,28 @@ const PriceChart = ({
           <TimeButton 
             active={activeTimeframe === '1D'} 
             onClick={() => handleTimeframeChange('1D')}
+            aria-label="Show 1 day chart"
           >
             1D
           </TimeButton>
           <TimeButton 
             active={activeTimeframe === '1W'} 
             onClick={() => handleTimeframeChange('1W')}
+            aria-label="Show 1 week chart"
           >
             1W
           </TimeButton>
           <TimeButton 
             active={activeTimeframe === '1M'} 
             onClick={() => handleTimeframeChange('1M')}
+            aria-label="Show 1 month chart"
           >
             1M
           </TimeButton>
           <TimeButton 
             active={activeTimeframe === '3M'} 
             onClick={() => handleTimeframeChange('3M')}
+            aria-label="Show 3 months chart"
           >
             3M
           </TimeButton>
