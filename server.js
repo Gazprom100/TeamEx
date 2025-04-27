@@ -21,6 +21,10 @@ app.use(express.urlencoded({ extended: true }));
 // Путь к файлу с данными о курсах
 const RATES_FILE_PATH = path.join(__dirname, 'data', 'rates.json');
 
+// Путь к файлу с данными о рефералах
+const REFERRALS_FILE_PATH = path.join(__dirname, 'data', 'referrals.json');
+const COMMISSIONS_FILE_PATH = path.join(__dirname, 'data', 'commissions.json');
+
 // Создание директории для данных, если она не существует
 const ensureDataDirExists = () => {
   const dataDir = path.join(__dirname, 'data');
@@ -63,6 +67,70 @@ const saveRates = (rates) => {
     return true;
   } catch (error) {
     console.error('[SERVER] Ошибка при сохранении данных о курсах:', error);
+    return false;
+  }
+};
+
+// Загрузка данных о рефералах
+const loadReferrals = () => {
+  ensureDataDirExists();
+  
+  try {
+    if (fs.existsSync(REFERRALS_FILE_PATH)) {
+      const data = fs.readFileSync(REFERRALS_FILE_PATH, 'utf8');
+      return JSON.parse(data);
+    }
+    
+    // Если файл не существует, создаем его с пустым объектом
+    fs.writeFileSync(REFERRALS_FILE_PATH, JSON.stringify({}, null, 2));
+    return {};
+  } catch (error) {
+    console.error('[SERVER] Ошибка при загрузке данных о рефералах:', error);
+    return {};
+  }
+};
+
+// Сохранение данных о рефералах
+const saveReferrals = (referrals) => {
+  ensureDataDirExists();
+  
+  try {
+    fs.writeFileSync(REFERRALS_FILE_PATH, JSON.stringify(referrals, null, 2));
+    return true;
+  } catch (error) {
+    console.error('[SERVER] Ошибка при сохранении данных о рефералах:', error);
+    return false;
+  }
+};
+
+// Загрузка данных о комиссиях
+const loadCommissions = () => {
+  ensureDataDirExists();
+  
+  try {
+    if (fs.existsSync(COMMISSIONS_FILE_PATH)) {
+      const data = fs.readFileSync(COMMISSIONS_FILE_PATH, 'utf8');
+      return JSON.parse(data);
+    }
+    
+    // Если файл не существует, создаем его с пустым объектом
+    fs.writeFileSync(COMMISSIONS_FILE_PATH, JSON.stringify({}, null, 2));
+    return {};
+  } catch (error) {
+    console.error('[SERVER] Ошибка при загрузке данных о комиссиях:', error);
+    return {};
+  }
+};
+
+// Сохранение данных о комиссиях
+const saveCommissions = (commissions) => {
+  ensureDataDirExists();
+  
+  try {
+    fs.writeFileSync(COMMISSIONS_FILE_PATH, JSON.stringify(commissions, null, 2));
+    return true;
+  } catch (error) {
+    console.error('[SERVER] Ошибка при сохранении данных о комиссиях:', error);
     return false;
   }
 };
@@ -151,6 +219,159 @@ app.post('/api/rates', (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Внутренняя ошибка сервера'
+    });
+  }
+});
+
+// API эндпоинты для работы с рефералами
+app.get('/api/referrals/:userId', (req, res) => {
+  try {
+    console.log('[SERVER] GET /api/referrals/:userId - Запрос на получение данных о рефералах пользователя');
+    const { userId } = req.params;
+    
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Не указан ID пользователя'
+      });
+    }
+    
+    const referrals = loadReferrals();
+    const userReferrals = {
+      // Информация о реферале (кто пригласил пользователя)
+      referrer: referrals[userId] || null,
+      
+      // Список пользователей, которых пригласил этот пользователь (первая линия)
+      referredUsers: Object.entries(referrals)
+        .filter(([id, data]) => data.referrerId === userId)
+        .map(([id, data]) => ({
+          userId: id,
+          dateAdded: data.dateAdded
+        }))
+    };
+    
+    res.json({
+      success: true,
+      data: userReferrals
+    });
+  } catch (error) {
+    console.error('[SERVER] Ошибка при получении данных о рефералах:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при получении данных о рефералах'
+    });
+  }
+});
+
+// Добавление новой реферальной связи
+app.post('/api/referrals', (req, res) => {
+  try {
+    console.log('[SERVER] POST /api/referrals - Запрос на добавление реферальной связи');
+    console.log('[SERVER] Данные запроса:', req.body);
+    
+    const { referrerId, referredId } = req.body;
+    
+    // Валидация входных данных
+    if (!referrerId || !referredId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Необходимо указать ID реферера и реферала'
+      });
+    }
+    
+    // Нельзя быть собственным рефералом
+    if (referrerId === referredId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Нельзя быть собственным рефералом'
+      });
+    }
+    
+    // Получаем текущие реферальные связи
+    const referrals = loadReferrals();
+    
+    // Проверяем, не зарегистрирован ли уже пользователь через другого реферера
+    if (referrals[referredId] && referrals[referredId].referrerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Пользователь уже зарегистрирован через другого реферера'
+      });
+    }
+    
+    // Находим верхние уровни (до 3-х линий вверх)
+    let firstLine = referrerId;
+    let secondLine = null;
+    let thirdLine = null;
+    
+    if (referrals[firstLine]) {
+      secondLine = referrals[firstLine].referrerId;
+      
+      if (secondLine && referrals[secondLine]) {
+        thirdLine = referrals[secondLine].referrerId;
+      }
+    }
+    
+    // Обновляем реферальные данные
+    referrals[referredId] = {
+      referrerId: firstLine,
+      secondLineId: secondLine,
+      thirdLineId: thirdLine,
+      dateAdded: new Date().toISOString()
+    };
+    
+    // Сохраняем обновленные данные
+    if (saveReferrals(referrals)) {
+      res.json({
+        success: true,
+        message: 'Реферальная связь успешно добавлена',
+        data: referrals[referredId]
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: 'Ошибка при сохранении реферальной связи'
+      });
+    }
+  } catch (error) {
+    console.error('[SERVER] Ошибка при добавлении реферальной связи:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Внутренняя ошибка сервера'
+    });
+  }
+});
+
+// Получение комиссий пользователя
+app.get('/api/commissions/:userId', (req, res) => {
+  try {
+    console.log('[SERVER] GET /api/commissions/:userId - Запрос на получение комиссий пользователя');
+    const { userId } = req.params;
+    
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Не указан ID пользователя'
+      });
+    }
+    
+    const commissions = loadCommissions();
+    const userCommissions = commissions[userId] || [];
+    
+    // Подсчет общей суммы комиссий
+    const totalCommissions = userCommissions.reduce((total, commission) => total + commission.amount, 0);
+    
+    res.json({
+      success: true,
+      data: {
+        commissions: userCommissions,
+        totalCommissions
+      }
+    });
+  } catch (error) {
+    console.error('[SERVER] Ошибка при получении комиссий пользователя:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при получении комиссий пользователя'
     });
   }
 });
