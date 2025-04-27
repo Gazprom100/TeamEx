@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -199,14 +199,44 @@ const AdminLink = styled.div`
   text-align: center;
 `;
 
+const StatusBadge = styled.div`
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: ${props => props.isAdmin ? 'var(--color-success)' : 'var(--color-danger)'};
+  padding: 8px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+`;
+
 const Home = ({ telegramUser }) => {
   const navigate = useNavigate();
+  const [debugInfo, setDebugInfo] = useState(null);
   
   // Проверяем, разрешены ли сложные анимации
   const complexAnimationsAllowed = useMemo(() => areComplexAnimationsAllowed(), []);
   
   // Проверяем, является ли текущий пользователь администратором
   const isAdmin = useMemo(() => isUserAdmin(telegramUser), [telegramUser]);
+  
+  // Отображение отладочной информации
+  useEffect(() => {
+    setDebugInfo({
+      isAdmin,
+      telegramUserId: telegramUser?.id,
+      hasLocalAccess: localStorage.getItem('adminAccess') === 'true'
+    });
+  }, [isAdmin, telegramUser]);
   
   // Безопасные варианты анимации
   const containerVariants = safeVariants({
@@ -285,6 +315,10 @@ const Home = ({ telegramUser }) => {
     <PageContainer>
       <ParticlesBackground />
       <Layout>
+        <StatusBadge isAdmin={isAdmin}>
+          {isAdmin ? 'Админ-доступ: Есть' : 'Админ-доступ: Нет'} 
+          {isAdmin ? '✓' : '✗'}
+        </StatusBadge>
         <StaticHero>
           <StaticLogoContainer>
             <LogoIcon size="40px" color="var(--accent-primary)" />
@@ -374,6 +408,10 @@ const Home = ({ telegramUser }) => {
     <PageContainer>
       <ParticlesBackground />
       <Layout>
+        <StatusBadge isAdmin={isAdmin}>
+          {isAdmin ? 'Админ-доступ: Есть' : 'Админ-доступ: Нет'} 
+          {isAdmin ? '✓' : '✗'}
+        </StatusBadge>
         <motion.div 
           variants={containerVariants} 
           initial="hidden" 

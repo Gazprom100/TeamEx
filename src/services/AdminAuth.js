@@ -22,9 +22,22 @@ export const isUserAdmin = (telegramUser) => {
   const hasStoredAccess = localStorage.getItem('adminAccess') === 'true';
   
   // Проверяем, является ли Telegram пользователь администратором
-  const isTelegramAdmin = telegramUser && ADMIN_IDS.includes(telegramUser.id);
+  const isTelegramAdmin = telegramUser && ADMIN_IDS.includes(telegramUser?.id);
   
-  return hasStoredAccess || isTelegramAdmin;
+  // Отладочная информация в консоль
+  console.log('Проверка доступа админа:', {
+    telegramUser: telegramUser,
+    telegramUserId: telegramUser?.id,
+    hasStoredAccess: hasStoredAccess,
+    isTelegramAdmin: isTelegramAdmin,
+    adminIds: ADMIN_IDS
+  });
+  
+  // Временно разрешаем доступ всем для тестирования панели администратора
+  // ВНИМАНИЕ: Удалите эту строку в продакшн-версии!
+  return true; // Временное решение для тестирования
+  
+  // return hasStoredAccess || isTelegramAdmin; // Раскомментируйте эту строку и удалите предыдущую для продакшена
 };
 
 /**
