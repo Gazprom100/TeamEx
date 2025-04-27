@@ -10,7 +10,7 @@ export const useSafeAnimation = () => {
     // Увеличенный таймаут для полной загрузки DOM
     const timeout = setTimeout(() => {
       setIsMounted(true);
-    }, isTelegramWebApp ? 300 : 150); // Увеличиваем таймаут для Telegram WebApp
+    }, isTelegramWebApp ? 600 : 300); // Увеличиваем таймаут для более надежной загрузки
     
     return () => {
       clearTimeout(timeout);
