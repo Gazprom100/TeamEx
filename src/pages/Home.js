@@ -8,7 +8,8 @@ import ParticlesBackground from '../components/ParticlesBackground';
 import PriceChart from '../components/PriceChart';
 import { Card, CardTypes } from '../components/Card';
 import { ExchangeIcon, ChartIcon, WalletIcon, UserIcon, BankIcon, SecurityIcon, LogoIcon } from '../components/Icons';
-import useSafeAnimation from '../hooks/useSafeAnimation';
+import AnimationSafeWrapper from '../components/AnimationSafeWrapper';
+import { safeAnimationProps, safeVariants } from '../utils/motionFeatureDetection';
 
 const PageContainer = styled.div`
   display: flex;
@@ -17,12 +18,27 @@ const PageContainer = styled.div`
   position: relative;
 `;
 
+// Статические версии компонентов для запасного варианта
+const StaticHero = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 30px;
+`;
+
 const Hero = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   margin-bottom: 30px;
+`;
+
+const StaticLogoContainer = styled.div`
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
 `;
 
 const LogoContainer = styled(motion.div)`
@@ -42,6 +58,13 @@ const LogoText = styled.h1`
   }
 `;
 
+const StaticTagline = styled.p`
+  font-size: 16px;
+  color: var(--text-secondary);
+  margin-bottom: 25px;
+  max-width: 320px;
+`;
+
 const Tagline = styled(motion.p)`
   font-size: 16px;
   color: var(--text-secondary);
@@ -49,11 +72,29 @@ const Tagline = styled(motion.p)`
   max-width: 320px;
 `;
 
+const StaticMainActions = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 30px;
+`;
+
 const MainActions = styled(motion.div)`
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   width: 100%;
+  margin-bottom: 30px;
+`;
+
+const StaticStatsRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  background: rgba(21, 29, 40, 0.7);
+  backdrop-filter: blur(8px);
+  border-radius: var(--border-radius);
+  padding: 15px;
   margin-bottom: 30px;
 `;
 
@@ -124,6 +165,14 @@ const MenuDescription = styled.p`
   line-height: 1.4;
 `;
 
+const StaticPoweredBy = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 20px;
+  opacity: 0.6;
+`;
+
 const PoweredBy = styled(motion.div)`
   display: flex;
   flex-direction: column;
@@ -146,9 +195,9 @@ const TeamExLogo = styled.span`
 
 const Home = () => {
   const navigate = useNavigate();
-  const isMounted = useSafeAnimation();
   
-  const containerVariants = {
+  // Безопасные варианты анимации
+  const containerVariants = safeVariants({
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -157,18 +206,18 @@ const Home = () => {
         staggerChildren: 0.1
       }
     }
-  };
+  });
   
-  const itemVariants = {
+  const itemVariants = safeVariants({
     hidden: { y: 20, opacity: 0 },
     visible: {
       y: 0,
       opacity: 1,
       transition: { type: "spring", stiffness: 300, damping: 24 }
     }
-  };
+  });
   
-  const cardVariants = {
+  const cardVariants = safeVariants({
     hidden: { y: 20, opacity: 0 },
     visible: { 
       y: 0, 
@@ -181,7 +230,7 @@ const Home = () => {
       transition: { type: "spring", stiffness: 300, damping: 20 }
     },
     tap: { scale: 0.98 }
-  };
+  });
   
   const handleExchangeClick = () => {
     navigate('/exchange');
@@ -218,105 +267,91 @@ const Home = () => {
     }
   ];
   
-  // Не рендерим компонент с анимациями, если он ещё не смонтирован
-  if (!isMounted) {
-    return (
-      <PageContainer>
-        <ParticlesBackground />
-        <Layout>
-          <Hero>
-            <LogoContainer>
-              <LogoIcon size="40px" color="var(--accent-primary)" />
-              <LogoText>Team<span>Ex</span></LogoText>
-            </LogoContainer>
-            
-            <Tagline>
-              Безопасный и быстрый обмен криптовалют на рубли и обратно
-            </Tagline>
-            
-            <MainActions>
-              <Button 
-                variant={ButtonVariants.GRADIENT}
-                size="large"
-                onClick={handleExchangeClick}
-                icon={<ExchangeIcon size="20px" />}
-              >
-                Купить USDT
-              </Button>
-              <Button 
-                variant={ButtonVariants.OUTLINE}
-                size="large"
-                onClick={handleExchangeClick}
-                icon={<BankIcon size="20px" />}
-              >
-                Продать USDT
-              </Button>
-            </MainActions>
-          </Hero>
-          
-          <StatsRow>
-            <StatItem>
-              <StatValue>97.25 ₽</StatValue>
-              <StatLabel>USDT/RUB</StatLabel>
-            </StatItem>
-            <StatItem>
-              <StatValue>95.30 ₽</StatValue>
-              <StatLabel>RUB/USDT</StatLabel>
-            </StatItem>
-            <StatItem>
-              <StatValue>5 мин.</StatValue>
-              <StatLabel>Скорость</StatLabel>
-            </StatItem>
-          </StatsRow>
-          
-          <PriceChart 
-            height="220px"
-            marginBottom="30px"
-          />
-          
-          <MenuGrid>
-            {menuItems.map((item) => (
-              <MenuCard
-                key={item.id}
-                type={CardTypes.FROSTED}
-                clickable
-                onClick={item.onClick}
-              >
-                <IconContainer>
-                  {item.icon}
-                </IconContainer>
-                <MenuTitle>{item.title}</MenuTitle>
-                <MenuDescription>{item.description}</MenuDescription>
-              </MenuCard>
-            ))}
-          </MenuGrid>
-          
-          <Card 
-            type={CardTypes.FROSTED}
-            icon={<SecurityIcon size="20px" color="var(--info)" />}
-            title="Безопасный обмен"
-          >
-            <MenuDescription>
-              Мы используем передовые технологии шифрования и соблюдаем требования KYC/AML для обеспечения безопасности ваших транзакций. Все обмены происходят автоматически без участия третьих лиц.
-            </MenuDescription>
-          </Card>
-          
-          <PoweredBy>
-            <PoweredByText>Powered by</PoweredByText>
-            <TeamExLogo>TeamEx Exchange</TeamExLogo>
-          </PoweredBy>
-        </Layout>
-      </PageContainer>
-    );
-  }
-  
-  return (
+  // Статическая версия страницы для fallback
+  const staticContent = (
     <PageContainer>
       <ParticlesBackground />
       <Layout>
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
+        <StaticHero>
+          <StaticLogoContainer>
+            <LogoIcon size="40px" color="var(--accent-primary)" />
+            <LogoText>Team<span>Ex</span></LogoText>
+          </StaticLogoContainer>
+          
+          <StaticTagline>
+            Безопасный и быстрый обмен криптовалют на рубли и обратно
+          </StaticTagline>
+          
+          <StaticMainActions>
+            <Button 
+              variant={ButtonVariants.GRADIENT}
+              size="large"
+              onClick={handleExchangeClick}
+              icon={<ExchangeIcon size="20px" />}
+            >
+              Купить USDT
+            </Button>
+            <Button 
+              variant={ButtonVariants.OUTLINE}
+              size="large"
+              onClick={handleExchangeClick}
+              icon={<BankIcon size="20px" />}
+            >
+              Продать USDT
+            </Button>
+          </StaticMainActions>
+          
+          <StaticStatsRow>
+            <StatItem>
+              <StatValue>96.5₽</StatValue>
+              <StatLabel>Покупка USDT</StatLabel>
+            </StatItem>
+            <StatItem>
+              <StatValue>95.0₽</StatValue>
+              <StatLabel>Продажа USDT</StatLabel>
+            </StatItem>
+            <StatItem>
+              <StatValue>27,183₽</StatValue>
+              <StatLabel>BTC/RUB</StatLabel>
+            </StatItem>
+          </StaticStatsRow>
+        </StaticHero>
+        
+        <PriceChart />
+        
+        <MenuGrid>
+          {menuItems.map(item => (
+            <Card 
+              key={item.id}
+              type={CardTypes.FROSTED}
+              clickable
+              onClick={item.onClick}
+            >
+              <IconContainer>
+                {item.icon}
+              </IconContainer>
+              <MenuTitle>{item.title}</MenuTitle>
+              <MenuDescription>{item.description}</MenuDescription>
+            </Card>
+          ))}
+        </MenuGrid>
+        
+        <StaticPoweredBy>
+          <PoweredByText>Powered by</PoweredByText>
+          <TeamExLogo>TeamEx Exchange</TeamExLogo>
+        </StaticPoweredBy>
+      </Layout>
+    </PageContainer>
+  );
+
+  // Анимированная версия страницы
+  const animatedContent = (
+    <PageContainer>
+      <ParticlesBackground />
+      <Layout>
+        <motion.div 
+          variants={containerVariants} 
+          initial="hidden" 
           animate="visible"
         >
           <Hero>
@@ -347,38 +382,35 @@ const Home = () => {
                 Продать USDT
               </Button>
             </MainActions>
+            
+            <StatsRow variants={itemVariants}>
+              <StatItem>
+                <StatValue>96.5₽</StatValue>
+                <StatLabel>Покупка USDT</StatLabel>
+              </StatItem>
+              <StatItem>
+                <StatValue>95.0₽</StatValue>
+                <StatLabel>Продажа USDT</StatLabel>
+              </StatItem>
+              <StatItem>
+                <StatValue>27,183₽</StatValue>
+                <StatLabel>BTC/RUB</StatLabel>
+              </StatItem>
+            </StatsRow>
           </Hero>
           
-          <StatsRow variants={itemVariants}>
-            <StatItem>
-              <StatValue>97.25 ₽</StatValue>
-              <StatLabel>USDT/RUB</StatLabel>
-            </StatItem>
-            <StatItem>
-              <StatValue>95.30 ₽</StatValue>
-              <StatLabel>RUB/USDT</StatLabel>
-            </StatItem>
-            <StatItem>
-              <StatValue>5 мин.</StatValue>
-              <StatLabel>Скорость</StatLabel>
-            </StatItem>
-          </StatsRow>
-          
-          <PriceChart 
-            height="220px"
-            marginBottom="30px"
-          />
+          <PriceChart />
           
           <MenuGrid>
-            {menuItems.map((item) => (
-              <MenuCard
+            {menuItems.map(item => (
+              <MenuCard 
                 key={item.id}
-                type={CardTypes.FROSTED}
-                clickable
-                onClick={item.onClick}
                 variants={cardVariants}
+                type={CardTypes.FROSTED}
                 whileHover="hover"
                 whileTap="tap"
+                clickable
+                onClick={item.onClick}
               >
                 <IconContainer>
                   {item.icon}
@@ -389,17 +421,6 @@ const Home = () => {
             ))}
           </MenuGrid>
           
-          <Card 
-            type={CardTypes.FROSTED}
-            variants={itemVariants}
-            icon={<SecurityIcon size="20px" color="var(--info)" />}
-            title="Безопасный обмен"
-          >
-            <MenuDescription>
-              Мы используем передовые технологии шифрования и соблюдаем требования KYC/AML для обеспечения безопасности ваших транзакций. Все обмены происходят автоматически без участия третьих лиц.
-            </MenuDescription>
-          </Card>
-          
           <PoweredBy variants={itemVariants}>
             <PoweredByText>Powered by</PoweredByText>
             <TeamExLogo>TeamEx Exchange</TeamExLogo>
@@ -407,6 +428,12 @@ const Home = () => {
         </motion.div>
       </Layout>
     </PageContainer>
+  );
+
+  return (
+    <AnimationSafeWrapper delay={500} fallback={staticContent}>
+      {animatedContent}
+    </AnimationSafeWrapper>
   );
 };
 

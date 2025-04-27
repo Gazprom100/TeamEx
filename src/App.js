@@ -1,4 +1,4 @@
-import React, { useState, useEffect, ErrorBoundary } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import styled, { ThemeProvider } from 'styled-components';
 import GlobalStyle from './styles/GlobalStyle';
@@ -14,6 +14,8 @@ class ErrorFallback extends React.Component {
   }
 
   static getDerivedStateFromError(error) {
+    // Когда происходит ошибка, устанавливаем глобальный флаг для отключения всех анимаций
+    window.DISABLE_ALL_ANIMATIONS = true;
     return { hasError: true, error };
   }
 
@@ -94,6 +96,27 @@ const Container = styled.div`
   color: ${props => props.theme.textPrimary};
 `;
 
+// Патч для Framer Motion, отключающий проблемные функции
+const patchFramerMotion = () => {
+  // Глобальный флаг для отключения анимаций
+  window.DISABLE_ALL_ANIMATIONS = false;
+  
+  // Перехват создания обработчиков событий
+  const originalAddEventListener = Element.prototype.addEventListener;
+  Element.prototype.addEventListener = function(type, listener, options) {
+    // Если элемент не в DOM или отключены анимации, не добавляем обработчик
+    if (window.DISABLE_ALL_ANIMATIONS || !document.contains(this)) {
+      return;
+    }
+    try {
+      return originalAddEventListener.call(this, type, listener, options);
+    } catch (error) {
+      console.warn('Failed to add event listener:', error);
+      return null;
+    }
+  };
+};
+
 function App() {
   const [theme, setTheme] = useState(darkTheme);
   const [telegramUser, setTelegramUser] = useState(null);
@@ -101,10 +124,13 @@ function App() {
   
   // Инициализация приложения выделена в отдельный эффект
   useEffect(() => {
+    // Патчим Framer Motion
+    patchFramerMotion();
+    
     const initApp = async () => {
       try {
         // Задержка для инициализации DOM перед анимациями
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 500));
         
         // Предзагрузка иконок (с проверкой доступности)
         const preloadIcons = async () => {
@@ -152,7 +178,8 @@ function App() {
     // Глобальный обработчик ошибок
     const errorHandler = (event) => {
       console.error('Caught error:', event.error || event.message);
-      // Можно отправить ошибку на сервер для анализа
+      // Отключаем анимации при первой ошибке
+      window.DISABLE_ALL_ANIMATIONS = true;
     };
     
     // Прерываем обработку ошибок в Framer Motion, которые не влияют на работу
@@ -162,6 +189,10 @@ function App() {
       if (args[0] && typeof args[0] === 'string' && 
          (args[0].includes('addEventListener') || 
           args[0].includes('framer-motion'))) {
+        // Отключаем анимации, если встречаем ошибку с addEventListener
+        if (args[0].includes('addEventListener')) {
+          window.DISABLE_ALL_ANIMATIONS = true;
+        }
         return;
       }
       originalConsoleError.apply(console, args);
@@ -172,6 +203,10 @@ function App() {
     return () => {
       window.removeEventListener('error', errorHandler);
       console.error = originalConsoleError;
+      // Восстанавливаем оригинальный addEventListener
+      if (Element.prototype.addEventListener !== originalAddEventListener) {
+        Element.prototype.addEventListener = originalAddEventListener;
+      }
     };
   }, []);
   
