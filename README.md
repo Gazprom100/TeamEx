@@ -39,6 +39,16 @@
    npm start
    ```
 
+## Деплой на Render
+
+1. **Создайте новый веб-сервис** на [Render](https://render.com)
+2. **Подключите репозиторий** с GitHub
+3. **Настройте переменные окружения**:
+   - `PORT` - порт (по умолчанию Render использует свой)
+   - `BOT_TOKEN` - токен вашего Telegram-бота
+4. **Команда сборки**: `npm install && npm run build`
+5. **Команда запуска**: `node server.js`
+
 ## Архитектура проекта
 
 - **Frontend**: React, React Router, Styled Components, Framer Motion
@@ -54,4 +64,4 @@
 
 ## Автор
 
-[Ваше Имя] - [ваш_email@gmail.com] 
+Евгений Владимирович - teamex@example.com 
