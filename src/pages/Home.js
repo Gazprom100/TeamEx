@@ -2,14 +2,15 @@ import React, { useMemo } from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Button, ButtonVariants } from '../components/Button';
+import { Button, ButtonVariants, ButtonSizes } from '../components/Button';
 import { Layout } from '../components/Layout';
 import ParticlesBackground from '../components/ParticlesBackground';
 import PriceChart from '../components/PriceChart';
 import { Card, CardTypes } from '../components/Card';
-import { ExchangeIcon, ChartIcon, WalletIcon, UserIcon, BankIcon, SecurityIcon, LogoIcon } from '../components/Icons';
+import { ExchangeIcon, ChartIcon, WalletIcon, UserIcon, BankIcon, SecurityIcon, LogoIcon, AdminIcon } from '../components/Icons';
 import AnimationSafeWrapper from '../components/AnimationSafeWrapper';
 import { safeAnimationProps, safeVariants, areComplexAnimationsAllowed } from '../utils/motionFeatureDetection';
+import { isUserAdmin } from '../services/AdminAuth';
 
 const PageContainer = styled.div`
   display: flex;
@@ -193,11 +194,19 @@ const TeamExLogo = styled.span`
   color: var(--text-primary);
 `;
 
-const Home = () => {
+const AdminLink = styled.div`
+  margin-top: 20px;
+  text-align: center;
+`;
+
+const Home = ({ telegramUser }) => {
   const navigate = useNavigate();
   
   // Проверяем, разрешены ли сложные анимации
   const complexAnimationsAllowed = useMemo(() => areComplexAnimationsAllowed(), []);
+  
+  // Проверяем, является ли текущий пользователь администратором
+  const isAdmin = useMemo(() => isUserAdmin(telegramUser), [telegramUser]);
   
   // Безопасные варианты анимации
   const containerVariants = safeVariants({
@@ -344,6 +353,18 @@ const Home = () => {
           <PoweredByText>Powered by</PoweredByText>
           <TeamExLogo>TeamEx Exchange</TeamExLogo>
         </StaticPoweredBy>
+        
+        {isAdmin && (
+          <AdminLink>
+            <Button 
+              variant={ButtonVariants.TEXT}
+              size={ButtonSizes.SMALL}
+              onClick={() => navigate('/admin')}
+            >
+              Панель администратора
+            </Button>
+          </AdminLink>
+        )}
       </Layout>
     </PageContainer>
   );
@@ -427,10 +448,26 @@ const Home = () => {
             ))}
           </MenuGrid>
           
-          <PoweredBy variants={itemVariants}>
+          <PoweredBy
+            initial="hidden"
+            animate="visible"
+            variants={containerVariants}
+          >
             <PoweredByText>Powered by</PoweredByText>
             <TeamExLogo>TeamEx Exchange</TeamExLogo>
           </PoweredBy>
+          
+          {isAdmin && (
+            <AdminLink>
+              <Button 
+                variant={ButtonVariants.TEXT}
+                size={ButtonSizes.SMALL}
+                onClick={() => navigate('/admin')}
+              >
+                Панель администратора
+              </Button>
+            </AdminLink>
+          )}
         </motion.div>
       </Layout>
     </PageContainer>

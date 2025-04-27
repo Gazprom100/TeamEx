@@ -4,6 +4,7 @@ import styled, { ThemeProvider } from 'styled-components';
 import GlobalStyle from './styles/GlobalStyle';
 import Home from './pages/Home';
 import Exchange from './pages/Exchange';
+import Admin from './pages/Admin';
 import { lightTheme, darkTheme } from './styles/theme';
 
 // Сохраняем оригинальный метод addEventListener
@@ -283,6 +284,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Home telegramUser={telegramUser} />} />
               <Route path="/exchange" element={<Exchange telegramUser={telegramUser} />} />
+              <Route path="/admin" element={<Admin telegramUser={telegramUser} />} />
               {/* Здесь могут быть дополнительные маршруты */}
             </Routes>
           </Router>
