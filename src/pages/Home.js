@@ -11,6 +11,8 @@ import { ExchangeIcon, ChartIcon, WalletIcon, UserIcon, BankIcon, SecurityIcon, 
 import AnimationSafeWrapper from '../components/AnimationSafeWrapper';
 import { safeAnimationProps, safeVariants, areComplexAnimationsAllowed } from '../utils/motionFeatureDetection';
 import { isUserAdmin } from '../services/AdminAuth';
+import { getBuyRate, getSellRate } from '../services/RatesService';
+import { Link } from 'react-router-dom';
 
 const PageContainer = styled.div`
   display: flex;
@@ -222,21 +224,24 @@ const StatusBadge = styled.div`
 const Home = ({ telegramUser }) => {
   const navigate = useNavigate();
   const [debugInfo, setDebugInfo] = useState(null);
+  const [buyRate, setBuyRate] = useState(0);
+  const [sellRate, setSellRate] = useState(0);
+  const [isAdmin, setIsAdmin] = useState(false);
   
   // Проверяем, разрешены ли сложные анимации
   const complexAnimationsAllowed = useMemo(() => areComplexAnimationsAllowed(), []);
   
-  // Проверяем, является ли текущий пользователь администратором
-  const isAdmin = useMemo(() => isUserAdmin(telegramUser), [telegramUser]);
-  
-  // Отображение отладочной информации
+  // Загрузка курсов при монтировании
   useEffect(() => {
-    setDebugInfo({
-      isAdmin,
-      telegramUserId: telegramUser?.id,
-      hasLocalAccess: localStorage.getItem('adminAccess') === 'true'
-    });
-  }, [isAdmin, telegramUser]);
+    // Загружаем текущие курсы из сервиса
+    setBuyRate(getBuyRate());
+    setSellRate(getSellRate());
+    
+    // Проверяем, является ли пользователь администратором
+    if (telegramUser) {
+      setIsAdmin(isUserAdmin(telegramUser));
+    }
+  }, [telegramUser]);
   
   // Безопасные варианты анимации
   const containerVariants = safeVariants({

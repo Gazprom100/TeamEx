@@ -12,6 +12,7 @@ import api from '../services/api';
 import Header from '../components/Header';
 import axios from 'axios';
 import useSafeAnimation from '../hooks/useSafeAnimation';
+import { getBuyRate, getSellRate } from '../services/RatesService';
 
 const ExchangeContainer = styled(motion.div)`
   width: 100%;
@@ -372,14 +373,13 @@ const Exchange = () => {
 
   const fetchRates = async () => {
     try {
-      // В реальном проекте здесь будет запрос к бэкенду
-      // const response = await axios.get('/api/rates');
-      // setRates(response.data);
+      // Получаем курсы из сервиса RatesService
+      const buyRate = await getBuyRate();
+      const sellRate = await getSellRate();
       
-      // Временное решение с фиксированными курсами для демонстрации
       setRates({
-        buy: 97.5,
-        sell: 95.5
+        buy: buyRate,
+        sell: sellRate
       });
     } catch (error) {
       console.error('Error fetching rates:', error);

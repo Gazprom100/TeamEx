@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { Card } from '../Card';
+import { getBuyRate, getSellRate, getRatesHistory, updateRates } from '../../services/RatesService';
 
 const RatesContainer = styled.div`
   display: grid;
@@ -150,66 +151,159 @@ const TableCell = styled.td`
   color: ${props => props.highlight ? 'var(--color-success)' : 'var(--text-primary)'};
 `;
 
-// Мок данных для демонстрации
-const MOCK_HISTORY = [
-  { id: 1, timestamp: '2023-06-01 10:15', user: 'admin', buyRate: 78.5, sellRate: 76.2 },
-  { id: 2, timestamp: '2023-06-01 14:30', user: 'admin', buyRate: 79.0, sellRate: 76.8 },
-  { id: 3, timestamp: '2023-06-02 09:45', user: 'admin', buyRate: 78.8, sellRate: 76.5 },
-  { id: 4, timestamp: '2023-06-03 11:20', user: 'admin', buyRate: 79.2, sellRate: 77.0 },
-  { id: 5, timestamp: '2023-06-04 16:10', user: 'admin', buyRate: 79.5, sellRate: 77.2 },
-  { id: 6, timestamp: '2023-06-05 13:40', user: 'admin', buyRate: 80.0, sellRate: 77.5 },
-  { id: 7, timestamp: '2023-06-06 10:05', user: 'admin', buyRate: 80.2, sellRate: 77.8 },
-  { id: 8, timestamp: '2023-06-07 15:30', user: 'admin', buyRate: 80.5, sellRate: 78.0 },
-];
+const NotificationBar = styled.div`
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: ${props => props.type === 'success' ? 'rgba(0, 200, 83, 0.9)' : 'rgba(255, 59, 48, 0.9)'};
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+`;
+
+const EmptyHistory = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  color: var(--text-secondary);
+  font-style: italic;
+`;
 
 const AdminRates = () => {
-  const [buyRate, setBuyRate] = useState('80.5');
-  const [sellRate, setSellRate] = useState('78.0');
+  const [buyRate, setBuyRate] = useState('');
+  const [sellRate, setSellRate] = useState('');
   const [history, setHistory] = useState([]);
   const [isFormChanged, setIsFormChanged] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
   
-  // Симуляция загрузки данных
+  // Загрузка данных при монтировании
   useEffect(() => {
-    // В реальном приложении здесь был бы API-запрос
-    setHistory(MOCK_HISTORY);
+    loadRates();
   }, []);
   
+  // Загрузка актуальных курсов и истории
+  const loadRates = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      
+      // Получаем актуальные курсы через API
+      const currentBuyRate = await getBuyRate();
+      const currentSellRate = await getSellRate();
+      const ratesHistory = getRatesHistory();
+      
+      setBuyRate(currentBuyRate.toString());
+      setSellRate(currentSellRate.toString());
+      setHistory(ratesHistory);
+      
+      // Сбрасываем флаг изменений при загрузке данных
+      setIsFormChanged(false);
+      
+      console.log('Данные о курсах загружены:', { currentBuyRate, currentSellRate, historyLength: ratesHistory.length });
+    } catch (error) {
+      console.error('Ошибка при загрузке курсов:', error);
+      showNotification('Ошибка при загрузке данных: ' + (error.message || 'Неизвестная ошибка'), 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+  
+  // Обработчик изменения курса покупки
   const handleBuyRateChange = (e) => {
     setBuyRate(e.target.value);
     setIsFormChanged(true);
   };
   
+  // Обработчик изменения курса продажи
   const handleSellRateChange = (e) => {
     setSellRate(e.target.value);
     setIsFormChanged(true);
   };
   
-  const handleSubmit = (e) => {
+  // Обработчик отправки формы
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // В реальном приложении здесь был бы API-запрос для обновления курсов
-    const newEntry = {
-      id: Date.now(),
-      timestamp: new Date().toLocaleString(),
-      user: 'admin',
-      buyRate: parseFloat(buyRate),
-      sellRate: parseFloat(sellRate)
-    };
+    // Валидация перед отправкой
+    if (!buyRate || isNaN(parseFloat(buyRate)) || parseFloat(buyRate) <= 0) {
+      showNotification('Курс покупки должен быть положительным числом', 'error');
+      return;
+    }
     
-    setHistory([newEntry, ...history]);
-    setIsFormChanged(false);
+    if (!sellRate || isNaN(parseFloat(sellRate)) || parseFloat(sellRate) <= 0) {
+      showNotification('Курс продажи должен быть положительным числом', 'error');
+      return;
+    }
     
-    // Здесь мог бы быть вызов уведомления об успешном обновлении
+    try {
+      setIsUpdating(true);
+      
+      // Обновляем курсы через сервис
+      const result = await updateRates(parseFloat(buyRate), parseFloat(sellRate));
+      
+      // Обновляем состояние компонента
+      setBuyRate(result.buyRate.toString());
+      setSellRate(result.sellRate.toString());
+      setHistory([result.historyEntry, ...history]);
+      setIsFormChanged(false);
+      
+      // Показываем уведомление об успехе
+      showNotification('Курсы успешно обновлены', 'success');
+      
+      console.log('Курсы обновлены:', result);
+    } catch (error) {
+      console.error('Ошибка при обновлении курсов:', error);
+      showNotification('Ошибка при обновлении курсов: ' + (error.message || 'Неизвестная ошибка'), 'error');
+    } finally {
+      setIsUpdating(false);
+    }
   };
   
-  const handleReset = () => {
-    // Возврат к последним сохраненным значениям
-    if (history.length > 0) {
-      const lastEntry = history[0];
-      setBuyRate(lastEntry.buyRate.toString());
-      setSellRate(lastEntry.sellRate.toString());
+  // Отображение уведомления
+  const showNotification = (message, type = 'success') => {
+    setNotification({ show: true, message, type });
+    
+    // Автоматически скрываем уведомление через 3 секунды
+    setTimeout(() => {
+      setNotification({ show: false, message: '', type: 'success' });
+    }, 3000);
+  };
+  
+  // Обработчик сброса формы
+  const handleReset = async () => {
+    try {
+      setIsUpdating(true);
+      
+      // Возврат к последним сохраненным значениям
+      if (history.length > 0) {
+        const lastEntry = history[0];
+        setBuyRate(lastEntry.buyRate.toString());
+        setSellRate(lastEntry.sellRate.toString());
+      } else {
+        // Если истории нет, берем значения из сервиса
+        const currentBuyRate = await getBuyRate();
+        const currentSellRate = await getSellRate();
+        setBuyRate(currentBuyRate.toString());
+        setSellRate(currentSellRate.toString());
+      }
+      
+      setIsFormChanged(false);
+    } catch (error) {
+      console.error('Ошибка при сбросе формы:', error);
+      showNotification('Ошибка при загрузке текущих курсов: ' + (error.message || 'Неизвестная ошибка'), 'error');
+    } finally {
+      setIsUpdating(false);
     }
-    setIsFormChanged(false);
+  };
+  
+  // Обработчик обновления курсов
+  const handleRefresh = async () => {
+    await loadRates();
+    showNotification('Курсы успешно обновлены', 'success');
   };
   
   return (
@@ -219,10 +313,23 @@ const AdminRates = () => {
       transition={{ duration: 0.3 }}
       style={{ height: '100%' }}
     >
+      {notification.show && (
+        <NotificationBar type={notification.type}>
+          {notification.message}
+        </NotificationBar>
+      )}
+      
       <RatesContainer>
         <RateCard>
           <RateHeader>
             <RateTitle>Управление курсами USDT</RateTitle>
+            <Button 
+              type="button" 
+              onClick={handleRefresh}
+              disabled={isUpdating || isLoading}
+            >
+              Обновить
+            </Button>
           </RateHeader>
           
           <RateDescription>
@@ -230,78 +337,99 @@ const AdminRates = () => {
             автоматически применены для всех пользователей.
           </RateDescription>
           
-          <RateForm onSubmit={handleSubmit}>
-            <FormGroup>
-              <Label htmlFor="buyRate">Курс покупки (руб.)</Label>
-              <Input
-                id="buyRate"
-                type="number"
-                step="0.1"
-                min="0"
-                value={buyRate}
-                onChange={handleBuyRateChange}
-                required
-              />
-            </FormGroup>
-            
-            <FormGroup>
-              <Label htmlFor="sellRate">Курс продажи (руб.)</Label>
-              <Input
-                id="sellRate"
-                type="number"
-                step="0.1"
-                min="0"
-                value={sellRate}
-                onChange={handleSellRateChange}
-                required
-              />
-            </FormGroup>
-            
-            <ButtonGroup>
-              <Button
-                type="button"
-                onClick={handleReset}
-                disabled={!isFormChanged}
-              >
-                Отменить
-              </Button>
-              <Button
-                type="submit"
-                primary
-                disabled={!isFormChanged}
-              >
-                Сохранить изменения
-              </Button>
-            </ButtonGroup>
-          </RateForm>
+          {isLoading ? (
+            <div style={{ textAlign: 'center', padding: 'var(--spacing-lg)' }}>
+              Загрузка курсов...
+            </div>
+          ) : (
+            <RateForm onSubmit={handleSubmit}>
+              <FormGroup>
+                <Label htmlFor="buyRate">Курс покупки (руб.)</Label>
+                <Input
+                  id="buyRate"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={buyRate}
+                  onChange={handleBuyRateChange}
+                  required
+                  disabled={isUpdating}
+                />
+              </FormGroup>
+              
+              <FormGroup>
+                <Label htmlFor="sellRate">Курс продажи (руб.)</Label>
+                <Input
+                  id="sellRate"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={sellRate}
+                  onChange={handleSellRateChange}
+                  required
+                  disabled={isUpdating}
+                />
+              </FormGroup>
+              
+              <ButtonGroup>
+                <Button
+                  type="button"
+                  onClick={handleReset}
+                  disabled={!isFormChanged || isUpdating}
+                >
+                  Отменить
+                </Button>
+                <Button
+                  type="submit"
+                  primary
+                  disabled={!isFormChanged || isUpdating}
+                >
+                  {isUpdating ? 'Сохранение...' : 'Сохранить изменения'}
+                </Button>
+              </ButtonGroup>
+            </RateForm>
+          )}
         </RateCard>
         
         <HistoryCard>
           <HistoryHeader>
-            <HistoryTitle>История изменений</HistoryTitle>
+            <HistoryTitle>
+              История изменений
+              {history.length > 0 ? ` (${history.length})` : ''}
+            </HistoryTitle>
           </HistoryHeader>
           
           <HistoryTable>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableHeader>Дата и время</TableHeader>
-                  <TableHeader>Администратор</TableHeader>
-                  <TableHeader>Курс покупки</TableHeader>
-                  <TableHeader>Курс продажи</TableHeader>
-                </TableRow>
-              </TableHead>
-              <tbody>
-                {history.map(entry => (
-                  <TableRow key={entry.id}>
-                    <TableCell>{entry.timestamp}</TableCell>
-                    <TableCell>{entry.user}</TableCell>
-                    <TableCell>{entry.buyRate.toFixed(1)}</TableCell>
-                    <TableCell>{entry.sellRate.toFixed(1)}</TableCell>
+            {isLoading ? (
+              <div style={{ textAlign: 'center', padding: 'var(--spacing-lg)' }}>
+                Загрузка истории...
+              </div>
+            ) : history.length > 0 ? (
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableHeader>Дата и время</TableHeader>
+                    <TableHeader>Администратор</TableHeader>
+                    <TableHeader>Курс покупки</TableHeader>
+                    <TableHeader>Курс продажи</TableHeader>
                   </TableRow>
-                ))}
-              </tbody>
-            </Table>
+                </TableHead>
+                <tbody>
+                  {history.map(entry => (
+                    <TableRow key={entry.id}>
+                      <TableCell>{entry.timestamp}</TableCell>
+                      <TableCell>{entry.user}</TableCell>
+                      <TableCell>{entry.buyRate.toFixed(1)}</TableCell>
+                      <TableCell>{entry.sellRate.toFixed(1)}</TableCell>
+                    </TableRow>
+                  ))}
+                </tbody>
+              </Table>
+            ) : (
+              <EmptyHistory>
+                <p>История изменений пуста</p>
+              </EmptyHistory>
+            )}
           </HistoryTable>
         </HistoryCard>
       </RatesContainer>

@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const { startBot } = require('./bot');
 require('dotenv').config();
 
@@ -9,23 +10,149 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Настройка middleware
-app.use(cors());
+app.use(cors({
+  origin: '*', // Разрешаем запросы с любого источника (в продакшене настроить более строго)
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Путь к файлу с данными о курсах
+const RATES_FILE_PATH = path.join(__dirname, 'data', 'rates.json');
+
+// Создание директории для данных, если она не существует
+const ensureDataDirExists = () => {
+  const dataDir = path.join(__dirname, 'data');
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+};
+
+// Начальные данные о курсах
+const DEFAULT_RATES = {
+  buy: 96.5,  // Курс покупки USDT (сколько рублей за 1 USDT)
+  sell: 95.0  // Курс продажи USDT (сколько рублей за 1 USDT)
+};
+
+// Загрузка данных о курсах
+const loadRates = () => {
+  ensureDataDirExists();
+  
+  try {
+    if (fs.existsSync(RATES_FILE_PATH)) {
+      const data = fs.readFileSync(RATES_FILE_PATH, 'utf8');
+      return JSON.parse(data);
+    }
+    
+    // Если файл не существует, создаем его с дефолтными значениями
+    fs.writeFileSync(RATES_FILE_PATH, JSON.stringify(DEFAULT_RATES, null, 2));
+    return DEFAULT_RATES;
+  } catch (error) {
+    console.error('[SERVER] Ошибка при загрузке данных о курсах:', error);
+    return DEFAULT_RATES;
+  }
+};
+
+// Сохранение данных о курсах
+const saveRates = (rates) => {
+  ensureDataDirExists();
+  
+  try {
+    fs.writeFileSync(RATES_FILE_PATH, JSON.stringify(rates, null, 2));
+    return true;
+  } catch (error) {
+    console.error('[SERVER] Ошибка при сохранении данных о курсах:', error);
+    return false;
+  }
+};
 
 // Статические файлы из build директории
 app.use(express.static(path.join(__dirname, 'build')));
 
-// API эндпоинты
+// API эндпоинты для работы с курсами
 app.get('/api/rates', (req, res) => {
-  // В реальном приложении эти данные должны приходить из БД или внешнего API
-  res.json({
-    success: true,
-    data: {
-      buy: 96.5,  // Курс покупки USDT (сколько рублей за 1 USDT)
-      sell: 95.0  // Курс продажи USDT (сколько рублей за 1 USDT)
+  try {
+    console.log('[SERVER] GET /api/rates - Запрос на получение курсов');
+    const rates = loadRates();
+    console.log('[SERVER] Текущие курсы:', rates);
+    
+    res.json({
+      success: true,
+      data: rates
+    });
+  } catch (error) {
+    console.error('[SERVER] Ошибка при получении курсов:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при получении курсов'
+    });
+  }
+});
+
+app.post('/api/rates', (req, res) => {
+  try {
+    console.log('[SERVER] POST /api/rates - Запрос на обновление курсов');
+    console.log('[SERVER] Данные запроса:', req.body);
+    
+    const { buy, sell } = req.body;
+    
+    // Валидация входных данных
+    if (buy === undefined || sell === undefined) {
+      console.warn('[SERVER] Отсутствуют параметры buy или sell');
+      return res.status(400).json({
+        success: false,
+        message: 'Необходимо указать параметры buy и sell'
+      });
     }
-  });
+    
+    // Проверка на корректные значения
+    const buyRate = parseFloat(buy);
+    const sellRate = parseFloat(sell);
+    
+    if (isNaN(buyRate) || isNaN(sellRate)) {
+      console.warn('[SERVER] Неверный формат значений');
+      return res.status(400).json({
+        success: false,
+        message: 'Значения курсов должны быть числами'
+      });
+    }
+    
+    if (buyRate <= 0 || sellRate <= 0) {
+      console.warn('[SERVER] Отрицательные или нулевые значения курсов');
+      return res.status(400).json({
+        success: false,
+        message: 'Курсы должны быть положительными числами'
+      });
+    }
+    
+    // Сохранение новых значений
+    const newRates = {
+      buy: buyRate,
+      sell: sellRate
+    };
+    
+    if (saveRates(newRates)) {
+      console.log('[SERVER] Курсы успешно обновлены:', newRates);
+      res.json({
+        success: true,
+        data: newRates,
+        message: 'Курсы успешно обновлены'
+      });
+    } else {
+      console.error('[SERVER] Ошибка при сохранении курсов');
+      res.status(500).json({
+        success: false,
+        message: 'Ошибка при сохранении данных о курсах'
+      });
+    }
+  } catch (error) {
+    console.error('[SERVER] Ошибка при обработке запроса на обновление курсов:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Внутренняя ошибка сервера'
+    });
+  }
 });
 
 // Все остальные GET запросы отправляют index.html
