@@ -8,6 +8,7 @@ import useSafeAnimation from '../hooks/useSafeAnimation';
 import AdminStats from '../components/admin/AdminStats';
 import AdminMessages from '../components/admin/AdminMessages';
 import AdminRates from '../components/admin/AdminRates';
+import AdminRequests from '../components/admin/AdminRequests';
 import { isUserAdmin, loginAdmin, logoutAdmin, ADMIN_PASSWORD } from '../services/AdminAuth';
 
 // Стили для админ-панели
@@ -154,6 +155,8 @@ const Admin = ({ telegramUser }) => {
         return <AdminMessages />;
       case 'rates':
         return <AdminRates />;
+      case 'requests':
+        return <AdminRequests />;
       default:
         return <AdminStats />;
     }
@@ -249,24 +252,10 @@ const Admin = ({ telegramUser }) => {
       </AdminHeader>
       
       <TabsContainer>
-        <TabButton 
-          active={activeTab === 'stats'} 
-          onClick={() => handleTabChange('stats')}
-        >
-          Статистика
-        </TabButton>
-        <TabButton 
-          active={activeTab === 'messages'} 
-          onClick={() => handleTabChange('messages')}
-        >
-          Сообщения
-        </TabButton>
-        <TabButton 
-          active={activeTab === 'rates'} 
-          onClick={() => handleTabChange('rates')}
-        >
-          Управление курсами
-        </TabButton>
+        <TabButton active={activeTab === 'stats'} onClick={() => handleTabChange('stats')}>Статистика</TabButton>
+        <TabButton active={activeTab === 'requests'} onClick={() => handleTabChange('requests')}>Заявки</TabButton>
+        <TabButton active={activeTab === 'rates'} onClick={() => handleTabChange('rates')}>Курс</TabButton>
+        <TabButton active={activeTab === 'messages'} onClick={() => handleTabChange('messages')}>Сообщения</TabButton>
       </TabsContainer>
       
       <ContentContainer
