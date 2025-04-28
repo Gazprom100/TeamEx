@@ -323,7 +323,7 @@ const Exchange = () => {
   });
   const [exchangeType, setExchangeType] = useState('buy'); // 'buy' or 'sell'
   const [calculatedAmount, setCalculatedAmount] = useState(0);
-  const [paymentMethod, setPaymentMethod] = useState('tinkoff');
+  const [paymentMethod, setPaymentMethod] = useState('cash');
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [telegramWebApp, setTelegramWebApp] = useState(null);
@@ -389,11 +389,9 @@ const Exchange = () => {
   const handleNext = () => {
     if (step === 1) {
       const newErrors = {};
-      
       if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
         newErrors.amount = 'Введите корректную сумму';
       }
-
       if (Object.keys(newErrors).length === 0) {
         setErrors({});
         setStep(2);
@@ -402,19 +400,12 @@ const Exchange = () => {
       }
     } else if (step === 2) {
       const newErrors = {};
-      
       if (!email || !email.includes('@')) {
         newErrors.email = 'Введите корректный Email';
       }
-      
-      if (!cardNumber || cardNumber.replace(/\s/g, '').length !== 16) {
-        newErrors.cardNumber = 'Введите 16 цифр номера карты';
-      }
-      
       if (!fullName || fullName.trim().split(' ').length < 2) {
         newErrors.fullName = 'Введите имя и фамилию';
       }
-
       if (Object.keys(newErrors).length === 0) {
         setErrors({});
         handleSubmit();
@@ -432,28 +423,17 @@ const Exchange = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Проверяем, что все поля заполнены
     if (!amount || parseFloat(amount) <= 0) {
       setError('Пожалуйста, введите корректную сумму');
       return;
     }
-    
-    if (exchangeType === 'buy' && (!cardNumber || cardNumber.replace(/\s/g, '').length !== 16)) {
-      setError('Пожалуйста, введите корректный номер карты');
-      return;
-    }
-    
     if (!paymentMethod) {
       setError('Пожалуйста, выберите способ оплаты');
       return;
     }
-    
     setLoading(true);
     setError('');
-    
     try {
-      // Данные для отправки
       const orderData = {
         user_id: user?.id,
         username: user?.username,
@@ -461,7 +441,6 @@ const Exchange = () => {
         amount: parseFloat(amount),
         total: parseFloat(calculatedAmount),
         payment_method: paymentMethod,
-        card_number: exchangeType === 'buy' ? cardNumber.replace(/\s/g, '') : undefined
       };
       
       // В реальном проекте здесь будет запрос к бэкенду
@@ -491,7 +470,6 @@ const Exchange = () => {
         setTimeout(() => {
           setSuccess(false);
           setAmount('');
-          setCardNumber('');
         }, 3000);
       }
     } catch (error) {
@@ -599,20 +577,6 @@ const Exchange = () => {
                 </CalculationRow>
               </FormGroup>
               
-              {exchangeType === 'buy' && (
-                <FormGroup>
-                  <Label>Ваша банковская карта</Label>
-                  <Input 
-                    type="text" 
-                    placeholder="Номер карты" 
-                    value={cardNumber} 
-                    onChange={handleCardNumberChange}
-                    maxLength="19"
-                    required
-                  />
-                </FormGroup>
-              )}
-              
               <FormGroup>
                 <Label>Способ оплаты</Label>
                 <Select 
@@ -620,11 +584,7 @@ const Exchange = () => {
                   onChange={(e) => setPaymentMethod(e.target.value)}
                   required
                 >
-                  <option value="tinkoff">Тинькофф</option>
-                  <option value="sber">Сбербанк</option>
-                  <option value="alfabank">Альфа-Банк</option>
-                  <option value="qiwi">QIWI</option>
-                  <option value="yoomoney">ЮMoney</option>
+                  <option value="cash">Наличные</option>
                 </Select>
               </FormGroup>
               
@@ -710,20 +670,6 @@ const Exchange = () => {
               </CalculationRow>
             </FormGroup>
             
-            {exchangeType === 'buy' && (
-              <FormGroup>
-                <Label>Ваша банковская карта</Label>
-                <Input 
-                  type="text" 
-                  placeholder="Номер карты" 
-                  value={cardNumber} 
-                  onChange={handleCardNumberChange}
-                  maxLength="19"
-                  required
-                />
-              </FormGroup>
-            )}
-            
             <FormGroup>
               <Label>Способ оплаты</Label>
               <Select 
@@ -731,11 +677,7 @@ const Exchange = () => {
                 onChange={(e) => setPaymentMethod(e.target.value)}
                 required
               >
-                <option value="tinkoff">Тинькофф</option>
-                <option value="sber">Сбербанк</option>
-                <option value="alfabank">Альфа-Банк</option>
-                <option value="qiwi">QIWI</option>
-                <option value="yoomoney">ЮMoney</option>
+                <option value="cash">Наличные</option>
               </Select>
             </FormGroup>
             
