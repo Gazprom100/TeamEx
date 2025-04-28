@@ -6,7 +6,7 @@ import { Card, CardTypes, CardSizes } from '../components/Card';
 import { Button, ButtonVariants, ButtonSizes } from '../components/Button';
 import useSafeAnimation from '../hooks/useSafeAnimation';
 import AdminStats from '../components/admin/AdminStats';
-import AdminMessages from '../components/admin/AdminMessages';
+import AdminCommunication from '../components/admin/AdminCommunication';
 import AdminRates from '../components/admin/AdminRates';
 import AdminRequests from '../components/admin/AdminRequests';
 import { isUserAdmin, loginAdmin, logoutAdmin, ADMIN_PASSWORD } from '../services/AdminAuth';
@@ -152,7 +152,7 @@ const Admin = ({ telegramUser }) => {
       case 'stats':
         return <AdminStats />;
       case 'messages':
-        return <AdminMessages />;
+        return <AdminCommunication />;
       case 'rates':
         return <AdminRates />;
       case 'requests':

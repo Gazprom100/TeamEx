@@ -33,11 +33,7 @@ export const isUserAdmin = (telegramUser) => {
     adminIds: ADMIN_IDS
   });
   
-  // Временно разрешаем доступ всем для тестирования панели администратора
-  // ВНИМАНИЕ: Удалите эту строку в продакшн-версии!
-  return true; // Временное решение для тестирования
-  
-  // return hasStoredAccess || isTelegramAdmin; // Раскомментируйте эту строку и удалите предыдущую для продакшена
+  return hasStoredAccess || isTelegramAdmin;
 };
 
 /**
